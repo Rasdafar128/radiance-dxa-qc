@@ -1,0 +1,9 @@
+# дом: разведка, обучение, валидация. Внутрь контейнера едет отдельный список —
+# см. context/TEMPLATE.md §1.
+pydicom==3.0.1
+numpy
+pandas
+openpyxl
+pillow
+matplotlib
+scikit-learn

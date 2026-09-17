@@ -1,0 +1,24 @@
+# данные организаторов: медицинские снимки в публичный репозиторий не кладём,
+# на сервер везём отдельно (context/TEMPLATE.md §8)
+data/
+docs/presentation_template.pptx
+docs/_misc/
+
+# веса и всё генерируемое
+artifacts/
+runs/
+logs/
+submissions/
+*.zip
+*.pt
+*.pth
+*.safetensors
+*.joblib
+
+# python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
