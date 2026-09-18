@@ -1,0 +1,14 @@
+**
+!docker/
+!docker/Dockerfile
+!docker/requirements.txt
+!src/
+!src/__init__.py
+!src/config.py
+!src/solution/
+!src/solution/*.py
+!artifacts/
+!artifacts/e0/
+!artifacts/e0/final/
+!artifacts/e0/final/encoder.pt
+!artifacts/e0/final/model.json

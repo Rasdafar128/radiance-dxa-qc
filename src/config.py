@@ -45,6 +45,10 @@ VIOLATIONS = {
 
 VIOLATION_SEP = "; "  # несколько нарушений перечисляются через «;», пусто — если их нет
 
+# Стабильные ключи пяти целей; подписи отчёта берём из VIOLATIONS.
+TARGETS = ["spine_position", "spine_axis", "spine_objects", "hip_position", "hip_roi"]
+TARGET_REGIONS = [REGION_SPINE] * 3 + [REGION_FEMUR] * 2
+
 OUTPUT_COLUMNS = [
     "path_to_study",
     "study_uid",

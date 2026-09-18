@@ -26,7 +26,7 @@ from . import data
 
 
 OUT = C.ARTIFACTS / "audit"
-TARGETS = ["spine_position", "spine_axis", "spine_objects", "hip_position", "hip_roi"]
+TARGETS = C.TARGETS
 
 
 def sha(payload):
