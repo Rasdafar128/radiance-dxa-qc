@@ -34,17 +34,7 @@
     --green:#5fd6a0; --green-soft:#0f2a1e;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.8);
   }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --paper:#0d1214; --grain:0.05;
-    --card:#141b1e; --card-2:#182024;
-    --ink:#e8edee; --ink-2:#9aa8ad; --ink-3:#6d7c82;
-    --line:#233036; --line-2:#1c272b;
-    --teal:#2fd4bd; --teal-2:#5ae6d2; --teal-soft:#102e2b; --teal-glow:#2fd4bd; --on-teal:#08201d;
-    --red:#ff8a80; --red-soft:#2d1614;
-    --amber:#f0b45c; --amber-soft:#2b1f0e;
-    --green:#5fd6a0; --green-soft:#0f2a1e;
-    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.8);
-  } }
+  /* тёмная тема — только по кнопке или ?theme=dark: в кабинете негатоскоп светлый */
 
   * { box-sizing:border-box }
   [hidden] { display:none !important }
@@ -402,8 +392,7 @@ const saved = forced === 'light' || forced === 'dark' ? forced
 if (saved) document.documentElement.dataset.theme = saved;
 else document.documentElement.removeAttribute('data-theme');
 $('#theme').onclick = () => {
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  const cur = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
+  const cur = document.documentElement.dataset.theme || 'light';
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem('dxaqc-theme', next); } catch (e) {}
