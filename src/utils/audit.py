@@ -210,10 +210,10 @@ def audit():
     hip_counts = u[u.region == "hip"].groupby("study").side.nunique()
     summary["side"]["opposite_sign_pairs"] = int((hip_counts == 2).sum())
     summary["cooccurrence"] = u[TARGETS].fillna(0).astype(int).T.dot(u[TARGETS].fillna(0).astype(int)).to_dict()
-    conflicts = set(mismatch.case)
-    u["excluded_primary"] = u.flag_quality.isna() | ((u.region == "spine") & u.case.isin(conflicts))
+    # Ответ эксперта, п. 8: отдельные критерии имеют приоритет над итогами Excel.
+    u["excluded_primary"] = u.flag_quality.isna()
     u.to_csv(OUT / "training_candidates.csv", index=False)
-    summary["primary_candidates"] = dict(images=int((~u.excluded_primary).sum()),
+    summary["primary_candidates"] = dict(label_policy="criteria_v2", images=int((~u.excluded_primary).sum()),
         studies=int(u[~u.excluded_primary].study.nunique()),
         targets=u[~u.excluded_primary][TARGETS].sum().astype(int).to_dict())
 
