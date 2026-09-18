@@ -28,7 +28,7 @@ async def lifespan(app):
         yield
 
 
-app = FastAPI(title="DXA Контроль · веб-шлюз", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="DXA Контроль · веб-шлюз", version="1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
 
 
 @app.middleware("http")
