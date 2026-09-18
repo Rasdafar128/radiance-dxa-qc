@@ -1,0 +1,36 @@
+name: radiance
+services:
+  api:
+    image: radiance:cpu
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DXA_DEVICE: cpu
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,size=1g
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  web:
+    image: radiance-web:1.1.0
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    environment:
+      DXA_UPSTREAM_URL: http://api:8080
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,size=600m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped

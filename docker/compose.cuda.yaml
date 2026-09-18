@@ -1,0 +1,9 @@
+services:
+  api:
+    image: radiance:cuda
+    build:
+      args:
+        TORCH_INDEX: cu126
+    environment:
+      DXA_DEVICE: cuda
+    gpus: all

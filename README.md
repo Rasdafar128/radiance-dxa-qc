@@ -1,13 +1,24 @@
-# Контроль качества DXA · ЛЦТ 2026
+# Radiance · контроль качества DXA
 
 Сайт и автономный сервис проверки денситометрии: DICOM → анатомическая область,
-качество, типы нарушения → CSV. Итоговая модель **E5: DINOv3 Large + MedImageInsight**.
+качество, типы нарушения → CSV. Модель команды **Radiance**: DINOv3 Large + MedImageInsight.
 Инференс работает без сети, обучения и обращения к облачным моделям.
 
 | Вход | Выход |
 |---|---|
 | Однокадровые монохромные DICOM поясничного отдела и проксимального отдела бедра | Одна строка CSV на каждый файл, включая ошибки и дубли |
 | Папка, отдельный файл или ZIP | Область, класс качества, оценка нарушения, типы, UID, статус и время |
+
+## Финальная поставка
+
+| Часть | Точка входа |
+|---|---|
+| Решение и состав поставки | [Схема решения](docs/SOLUTION.md) |
+| Сайт + модель на одном сервере | `docker/compose.yaml`, CUDA — `docker/compose.cuda.yaml` |
+| VDS + отдельный GPU-сервер | [Подключение сайта](docs/WEBSITE.md) |
+| Модель Radiance 1.0 | [Карточка модели](models/radiance/README.md) |
+| Установка и эксплуатация | [Развёртывание](docs/DEPLOYMENT.md) |
+| Исследования и воспроизведение | [research/](research/README.md) |
 
 ## Сайт
 
@@ -22,29 +33,30 @@ DXA_UPSTREAM_URL=http://127.0.0.1:8080 web/.venv/bin/uvicorn web.app:app \
   --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
-Открыть [localhost:8000](http://127.0.0.1:8000). Для настоящей проверки нужен E5 API,
+Открыть [localhost:8000](http://127.0.0.1:8000). Для настоящей проверки нужен Radiance API,
 запущенный ниже или подключённый через SSH-туннель. [Сайт, Docker и схема VDS → vast.ai](docs/WEBSITE.md).
 Развёртывание на VDS выполняется отдельно с владельцем.
 
 ## Быстрый запуск
 
-Требования: Linux x86_64, Docker, Python ≥3.11 для подготовки весов, 8 ГБ RAM
+Требования: Linux x86_64, Docker с Compose ≥2.30, Python ≥3.11 для подготовки весов, 8 ГБ RAM
 как исходный ориентир; для сборки оставьте 20 ГБ диска (CUDA — 30 ГБ).
 Для GPU нужен NVIDIA Container Toolkit и видеокарта с поддержкой CUDA 12.6;
 проверенная GPU-среда — RTX 3080 20 ГБ. Подробнее — [развёртывание](docs/DEPLOYMENT.md).
 
 ```bash
-# Скачать два encoder.pt из GitHub Release в каталоги models/e5/member_0 и member_1.
+# Скачать два encoder.pt из GitHub Release в каталоги models/radiance/member_0 и member_1.
 # Пошаговые команды для приватного репозитория: docs/DEPLOYMENT.md.
 python3 -m src.utils.prepare_model --verify-only
 
-# Собрать образ со всеми весами и запустить API на localhost:8080.
-./docker/run.sh cpu
-# На Linux с NVIDIA GPU: ./docker/run.sh cuda
+# Собрать и запустить сайт на localhost:8000 и API на localhost:8080.
+docker compose -f docker/compose.yaml up -d --build --wait --wait-timeout 300
+# На Linux с NVIDIA GPU:
+# docker compose -f docker/compose.yaml -f docker/compose.cuda.yaml up -d --build --wait --wait-timeout 300
 ```
 
-Веса прикреплены к [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0),
-контрольные суммы — в `models/e5/weights.json`. Репозиторий приватный: для скачивания
+Веса прикреплены к [GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0),
+контрольные суммы — в `models/radiance/weights.json`. Репозиторий приватный: для скачивания
 нужен доступ к GitHub, **HF-токен не требуется**. При открытом доступе к assets
 `python3 -m src.utils.prepare_model` скачивает и проверяет их автоматически.
 Локальный исследовательский комплект восстанавливается через
@@ -59,7 +71,9 @@ curl --fail -X POST http://127.0.0.1:8080/batch \
 ```
 
 Swagger: [localhost:8080/docs](http://127.0.0.1:8080/docs).
-Остановка — Ctrl+C. Сервис слушает только локальный интерфейс хоста.
+Остановка: `docker compose -f docker/compose.yaml down`. Оба сервиса доступны
+только на локальном интерфейсе хоста. Отдельный API: `./docker/run.sh cpu`
+или `./docker/run.sh cuda`.
 
 ## Пакетная обработка без HTTP
 
@@ -70,11 +84,11 @@ docker run --rm --platform linux/amd64 --network none --read-only \
   --tmpfs /tmp:rw,nosuid,size=1g \
   --mount type=bind,src="$(pwd)/input",dst=/input,readonly \
   --mount type=bind,src="$(pwd)/output",dst=/output \
-  lct26-dxa:e5-cpu python -m src.solution.batch /input --output /output/results.csv
+  radiance:cpu python -m src.solution.batch /input --output /output/results.csv
 ```
 
 Создайте `input/` и `output/` заранее; каталог вывода должен быть доступен UID 10001
-на запись. Для CUDA-образа добавьте `--gpus all`, тег `e5-cuda` и `--device cuda`.
+на запись. Для CUDA-образа добавьте `--gpus all`, тег `cuda` и `--device cuda`.
 Локальный запуск Python и команды проверки — в [руководстве по развёртыванию](docs/DEPLOYMENT.md).
 
 ## Как устроен пайплайн
@@ -117,8 +131,8 @@ flowchart LR
 
 Повторный [аудит](research/AUDIT.md) воспроизвёл головы, пороги, OOF и все метрики.
 Обнаруженных нарушений группового протокола нет; ограничения независимости выше сохраняются.
-Технически итоговая поставка обработала **502/502 DICOM за 81,54 с на RTX 3080**;
-максимум 4,67 с на исследование, холодная загрузка 26,04 с отдельно.
+Технически итоговая поставка обработала **502/502 DICOM за 82,35 с на RTX 3080**;
+максимум 4,75 с на исследование, холодная загрузка 24,69 с отдельно.
 Проверки контейнеров и сайта — [отчёт поставки](docs/DELIVERY.md).
 
 ## Контракт результата
@@ -138,11 +152,11 @@ UID сохраняются из DICOM. Проекции и локализаци�
 | `src/solution/` | DICOM, модель, CLI и API; единственный код инференса |
 | `src/utils/` | подготовка данных/весов, обучение, оценка и проверки |
 | `src/config.py` | пути и точные строки выходного контракта |
-| `models/e5/` | финальные головы, конфигурации, хеши, метрики и лицензии |
+| `models/radiance/` | финальные головы, конфигурации, хеши, метрики и лицензии |
 | `docker/` | закреплённые зависимости, Dockerfile, запуск CPU/CUDA |
 | `web/` | интерфейс, Python-шлюз и отдельный лёгкий контейнер |
-| `docs/` | руководства пользователя, развёртывания и обучения |
-| `research/` | исследования, отрицательные результаты и агрегатный аудит метрик |
+| `docs/` | схема решения, руководства пользователя, развёртывание и проверка поставки |
+| `research/` | обучение, исследования, отрицательные результаты, происхождение модели и аудит метрик |
 | `context/` | требования, решения и исходные документы конкурса в `organizers/` |
 | `PRODUCT.md`, `DESIGN.md` | назначение сайта и правила интерфейса |
 | `data/`, `artifacts/` | локальные данные и исследовательские артефакты, вне git и образа |
@@ -153,15 +167,15 @@ UID сохраняются из DICOM. Проекции и локализаци�
 - [Финальный аудит метрик и утечек](research/AUDIT.md)
 - [Руководство пользователя и API](docs/USER_GUIDE.md)
 - [Развёртывание и автономный запуск](docs/DEPLOYMENT.md)
-- [Обучение и воспроизведение E5](docs/TRAINING.md)
-- [Карточка модели и происхождение весов](models/e5/README.md)
+- [Обучение и воспроизведение Radiance](research/TRAINING.md)
+- [Карточка модели и происхождение весов](models/radiance/README.md)
 - [Проверки поставки и демо-сценарий](docs/DELIVERY.md)
 - [Полный журнал экспериментов](research/EXPERIMENTS.md) и [завершающий ML-цикл](research/ML_CYCLE3.md)
 
 ## Лицензии
 
-DINOv3 распространяется на условиях [DINOv3 License](models/e5/licenses/DINOv3.md),
-MedImageInsight — [MIT](models/e5/licenses/MedImageInsight.txt).
+DINOv3 распространяется на условиях [DINOv3 License](models/radiance/licenses/DINOv3.md),
+MedImageInsight — [MIT](models/radiance/licenses/MedImageInsight.txt).
 Условия компонентов не заменяются общей лицензией репозитория.
 Снимки, разметка и секреты не включаются в контейнер или комплект модели.
 Собственный код — [MIT](LICENSE). Шрифт Golos Text — [SIL OFL](web/static/fonts/OFL.txt).

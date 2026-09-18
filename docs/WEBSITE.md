@@ -1,6 +1,6 @@
 # Сайт «DXA Контроль»
 
-Лёгкое рабочее место: загрузка DICOM/ZIP, реальный вызов E5, список результатов,
+Лёгкое рабочее место: загрузка DICOM/ZIP, реальный вызов Radiance, список результатов,
 фильтры, разбор критериев и CSV. Раздел «О модели» показывает проверенные метрики
 и ограничения. «Посмотреть пример» использует вымышленные записи и работает без GPU.
 
@@ -9,7 +9,7 @@
 | Компонент | Где работает | Требования |
 |---|---|---|
 | `web/` — сайт и шлюз | локально или на будущем VDS | Python 3.12, без PyTorch; Docker по желанию |
-| `src/solution` — E5 API | GPU-сервер или локальный CPU | веса E5 и ML-зависимости |
+| `src/solution` — Radiance API | GPU-сервер или локальный CPU | веса Radiance и ML-зависимости |
 
 Браузер обращается только к веб-шлюзу. Адрес GPU задаётся на сервере через
 `DXA_UPSTREAM_URL`, не передаётся в JavaScript. На vast.ai ML API слушает loopback;
@@ -17,6 +17,10 @@
 релиз не входит: сервер и домен будут подключены с владельцем отдельно.
 
 ## Локальный запуск
+
+Если сайт и модель размещаются вместе, используйте готовый
+[Docker Compose](DEPLOYMENT.md#сайт-и-модель-вместе). Команды ниже нужны для
+отдельного веб-сервиса, в том числе VDS с удалённой GPU.
 
 Из корня проекта, когда ML API уже доступен на `127.0.0.1:8080`:
 
@@ -48,12 +52,12 @@ DXA_UPSTREAM_URL=http://127.0.0.1:18081 web/.venv/bin/uvicorn web.app:app \
 ## Веб-контейнер
 
 ```bash
-docker build -f web/Dockerfile -t lct26-web:v1 .
+docker build -f web/Dockerfile -t radiance-web:1.1.0 .
 # Docker Desktop: ML API/SSH-туннель работает на хосте.
 docker run --rm --name lct26-web --read-only --tmpfs /tmp:rw,nosuid,size=600m \
   --cap-drop ALL --security-opt no-new-privileges \
   -p 127.0.0.1:8000:8000 \
-  -e DXA_UPSTREAM_URL=http://host.docker.internal:18081 lct26-web:v1
+  -e DXA_UPSTREAM_URL=http://host.docker.internal:18081 radiance-web:1.1.0
 ```
 
 На Linux VDS с туннелем на loopback хоста:
@@ -62,7 +66,7 @@ docker run --rm --name lct26-web --read-only --tmpfs /tmp:rw,nosuid,size=600m \
 docker run -d --name lct26-web --restart unless-stopped \
   --network host --read-only --tmpfs /tmp:rw,nosuid,size=600m \
   --cap-drop ALL --security-opt no-new-privileges \
-  -e DXA_UPSTREAM_URL=http://127.0.0.1:18081 lct26-web:v1 \
+  -e DXA_UPSTREAM_URL=http://127.0.0.1:18081 radiance-web:1.1.0 \
   uvicorn web.app:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
@@ -94,7 +98,7 @@ docker run -d --name lct26-web --restart unless-stopped \
 - Сайт держит один запрос инференса на процесс. Если занят, новый запрос получает
   понятный ответ 503; очередь задач и многопользовательское масштабирование не реализованы.
 - Один worker шлюза; таймаут модели 10 минут. `/health` проверяет шлюз,
-  `/api/health` проверяет наличие E5 на upstream.
+  `/api/health` проверяет наличие Radiance на upstream.
 - Временные файлы закрываются после ответа/ошибки. Истории и базы данных нет;
   результат хранится только в памяти открытой вкладки до новой проверки/перезагрузки.
 - CSV содержит исходные UID; скачанный файл остаётся у пользователя. Файлы DICOM

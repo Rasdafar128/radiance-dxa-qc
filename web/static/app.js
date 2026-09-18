@@ -75,7 +75,7 @@ async function health() {
       : "Модель готова";
     $("connection").title = data.busy
       ? "Модель обрабатывает другой пакет"
-      : "Соединение с E5 установлено";
+      : "Соединение с Radiance установлено";
   } catch {
     $("connection").className = "connection offline";
     $("connection-text").textContent = "Модель недоступна";
@@ -251,7 +251,7 @@ function showResults() {
   $("results").hidden = false;
   $("demo-notice").hidden = !demo;
   $("result-summary").textContent =
-    `${rows.length} файлов · ${rows.filter(attention).length} с находками · ${rows.filter(failed).length} не обработано${demo ? "" : " · E5"}`;
+    `${rows.length} файлов · ${rows.filter(attention).length} с находками · ${rows.filter(failed).length} не обработано${demo ? "" : " · Radiance"}`;
   $("count-all").textContent = rows.length;
   $("count-attention").textContent = rows.filter(attention).length;
   $("count-failure").textContent = rows.filter(failed).length;

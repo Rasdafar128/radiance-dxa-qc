@@ -24,13 +24,14 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="DXA quality control", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Radiance · DXA quality control", version="1.1.0", lifespan=lifespan)
 
 
 @app.get("/health")
 def health():
     model = app.state.model
-    return {"status": "ok", "recipe": model.metadata["recipe"], "device": str(model.device),
+    return {"status": "ok", "model": model.metadata.get("name", model.metadata["backbone"]),
+            "version": model.metadata.get("version"), "recipe": model.metadata["recipe"], "device": str(model.device),
             "backbones": [m.metadata["backbone"] for m in getattr(model, "members", [model])]}
 
 

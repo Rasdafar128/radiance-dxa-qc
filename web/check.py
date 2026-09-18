@@ -24,7 +24,8 @@ class GatewayCheck(unittest.TestCase):
 
         def upstream(request):
             if request.url.path == "/health":
-                return httpx.Response(200, json={"status": "ok", "backbones": ["dinov3-large", "medimageinsight"]})
+                return httpx.Response(200, json={"status": "ok", "model": "Radiance", "version": "1.0",
+                                                  "backbones": ["dinov3-large", "medimageinsight"]})
             self.uploads.append(request.content)
             return httpx.Response(200, text=CSV, headers={"content-type": "text/csv"})
 
@@ -42,6 +43,7 @@ class GatewayCheck(unittest.TestCase):
                                     headers={"Content-Type": "application/dicom"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["csv"], CSV)
+        self.assertEqual(response.json()["model"], "Radiance")
         self.assertEqual(response.json()["rows"][0]["path_to_study"], "<script>.dcm")
         with zipfile.ZipFile(io.BytesIO(self.uploads[0])) as archive:
             self.assertEqual(archive.namelist(), ["image.dcm"])
@@ -70,6 +72,15 @@ class GatewayCheck(unittest.TestCase):
             self.assertEqual(self.uploads, [])
         finally:
             app.state.lock.release()
+
+    def test_wrong_model_is_not_used(self):
+        self.mock._transport = httpx.MockTransport(lambda request: httpx.Response(200, json={
+            "status": "ok", "model": "other", "version": "1.0",
+            "backbones": ["dinov3-large", "medimageinsight"]}))
+        response = self.client.post("/api/analyze", content=b"zip", headers={"Content-Type": "application/zip"})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(self.uploads, [])
+        self.assertFalse(app.state.lock.locked())
 
     def test_upstream_failure_and_static_boundary(self):
         def unavailable(request):

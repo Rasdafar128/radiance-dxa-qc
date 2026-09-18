@@ -1,15 +1,15 @@
 {
-  "id": "e5-v1",
+  "id": "radiance-v1",
   "files": {
     "member_0/encoder.pt": {
       "sha256": "2ce13fcdeef53c46eefd360f8ecb5978b58c1c5e9a9a758832dfcc63be4b4030",
       "bytes": 1212644225,
-      "url": "https://github.com/sefixnep/LCT26/releases/download/v1.0.0/dinov3-large-encoder.pt"
+      "url": "https://github.com/sefixnep/LCT26/releases/download/v1.1.0/dinov3-large-encoder.pt"
     },
     "member_1/encoder.pt": {
       "sha256": "9b219e75b62524529d6c12551d6e7dd5f57189d3e873eb73eef7a3ed937bc82e",
       "bytes": 1451069273,
-      "url": "https://github.com/sefixnep/LCT26/releases/download/v1.0.0/medimageinsight-encoder.pt"
+      "url": "https://github.com/sefixnep/LCT26/releases/download/v1.1.0/medimageinsight-encoder.pt"
     }
   }
 }

@@ -1,6 +1,6 @@
 # Обучение и воспроизведение
 
-Итоговый E5 использует уже обученные головы и замороженные энкодеры.
+Итоговый Radiance использует уже обученные головы и замороженные энкодеры.
 Для обычного запуска **обучение не требуется**. Ниже — воспроизведение ML-процедуры
 для разработчика с разрешённым доступом к данным организаторов и исходным весам.
 
@@ -52,9 +52,9 @@ CUBLAS_WORKSPACE_CONFIG=:4096:8 python -m src.utils.train \
   --device cuda --backbone medimageinsight --weights artifacts/pretrained/medimageinsight \
   --quality-gate --output artifacts/reproduced-mii
 python -m src.utils.train_blend artifacts/reproduced-dino artifacts/reproduced-mii \
-  --output artifacts/reproduced-e5
-python -m src.utils.check_protocol artifacts/reproduced-dino artifacts/reproduced-mii artifacts/reproduced-e5
-python -m src.utils.check --device cuda --model artifacts/reproduced-e5/final
+  --output artifacts/reproduced-radiance
+python -m src.utils.check_protocol artifacts/reproduced-dino artifacts/reproduced-mii artifacts/reproduced-radiance
+python -m src.utils.check --device cuda --model artifacts/reproduced-radiance/final
 ```
 
 Три внешних разбиения по исследованиям. Внутри outer train — два групповых фолда,
@@ -73,7 +73,7 @@ C ∈ {0,01; 0,1; 1}, балансировка None/balanced. Выбор тип�
 опытов нельзя продолжать изменённым кодом: несовпадение рецепта останавливает запуск.
 Используйте новые `--output`. Исторические исходники лежат в `artifacts/<опыт>/source/`.
 Повторное обучение воспроизводит процедуру; побайтовое совпадение файла весов
-между платформами/сериализациями не обещается. Поставка использует исходный E5
+между платформами/сериализациями не обещается. Поставка использует исходный Radiance
 с проверенными контрольными суммами, а не автоматически заменяет его новым refit.
 
 ## Проверки и исследовательские варианты
@@ -84,7 +84,7 @@ C ∈ {0,01; 0,1; 1}, балансировка None/balanced. Выбор тип�
 | `python -m src.utils.compare <первый> <второй>` | парные интервалы различий по исследованиям |
 | `python -m src.utils.diagnose <каталог>` | ошибки, редкие классы и устойчивость |
 | `python -m src.utils.check_cycle3` | регрессия настройки, препроцессора, masked loss; нужны исходные артефакты DINOv3 |
-| `python -m src.utils.finetune --output <новый-каталог>` | ограниченная адаптация DINOv3-L, nested CV; в поставку E5 не входит |
+| `python -m src.utils.finetune --output <новый-каталог>` | ограниченная адаптация DINOv3-L, nested CV; в поставку Radiance не входит |
 
 Исходный `e4-dinov3` содержит недействительные метрики из-за перестановки голов
 при сборке внутренних прогнозов. Исправленный `e4-dinov3-v2` использует те же
@@ -92,7 +92,7 @@ C ∈ {0,01; 0,1; 1}, балансировка None/balanced. Выбор тип�
 Он не может участвовать в сравнениях или новых ансамблях. Адаптированные OOF-признаки
 нельзя импортировать как общий frozen-кэш.
 
-Полные гипотезы, отрицательные результаты и причины выбора E5:
-[EXPERIMENTS](../research/EXPERIMENTS.md), [ML_CYCLE3](../research/ML_CYCLE3.md).
+Полные гипотезы, отрицательные результаты и причины выбора Radiance:
+[EXPERIMENTS](EXPERIMENTS.md), [ML_CYCLE3](ML_CYCLE3.md).
 Исследовательские веса, прогнозы и чекпойнты сохранены локально в `artifacts/`;
 в публичную поставку включаются только финальные веса, агрегированные метрики и код.

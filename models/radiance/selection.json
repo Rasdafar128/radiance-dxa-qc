@@ -1,8 +1,7 @@
 {
-  "selected": "E5",
-  "parent": "artifacts/e5-blend",
+  "selected": "Radiance",
   "parent_recipe_sha256": "7f2fa8a5caa9eae6a0004c3ffaf829bc58a1d01d15ae4d35462ef03d3cc82fab",
-  "reason": "Physical aspect worsened quality; repeated inner tuning failed split137 replication; limited adaptation and its blend did not beat E5.",
+  "reason": "Physical aspect worsened quality; repeated inner tuning failed split137 replication; limited adaptation and its blend did not beat the selected frozen ensemble.",
   "members": [
     "dinov3-large",
     "medimageinsight"
@@ -21,12 +20,12 @@
   "training_images": 249,
   "training_studies": 100,
   "metrics": {
-    "e5-blend": {
+    "primary": {
       "quality_f1": 0.6134969325153374,
       "quality_auc": 0.8047708725674828,
       "macro_f1": 0.45999999999999996
     },
-    "e5-blend-split137": {
+    "secondary": {
       "quality_f1": 0.5771812080536913,
       "quality_auc": 0.7543157564344005,
       "macro_f1": 0.4205171299288947
@@ -45,6 +44,7 @@
     "member_0/model.json": "137389e632a9f9852db0442f10a2d700f62989cd44023274c6dd508a552be722",
     "member_1/encoder.pt": "9b219e75b62524529d6c12551d6e7dd5f57189d3e873eb73eef7a3ed937bc82e",
     "member_1/model.json": "7cc26f700c3a9e2f46ee1ef71f54991bf68e2c4e99425d4c08976cafbf040fed",
-    "model.json": "972098259433f42ab6bd8325dfeb946ed5467d7c690221b4a506f514d7285b34"
-  }
+    "model.json": "c6213a14039a7ccee57c083c2c062e7c95339f1654dffdb6519b58a9910c52ba"
+  },
+  "provenance": "research/results/radiance_provenance.json"
 }

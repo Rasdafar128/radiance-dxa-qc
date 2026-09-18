@@ -13,7 +13,7 @@ RAW = DATA / "raw"
 TRAIN = DATA / "train"                        # распаковка НД_для_обучения.zip
 TEST = DATA / "test"                          # распаковка «Для теста.zip»
 ARTIFACTS = ROOT / "artifacts"  # веса
-MODEL = ROOT / "models" / "e5"
+MODEL = ROOT / "models" / "radiance"
 
 STUDIES = TRAIN / "Исследования"
 LABELS_XLSX = TRAIN / "разметка.xlsx"

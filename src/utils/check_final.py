@@ -1,4 +1,4 @@
-"""Повторная проверка E5: refit голов, пороги, происхождение и независимый расчёт метрик.
+"""Повторная проверка Radiance: refit голов, пороги, происхождение и независимый расчёт метрик.
 
 python -m src.utils.check_final --output research/results/final_audit.json
 """

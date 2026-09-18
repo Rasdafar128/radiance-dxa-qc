@@ -1,7 +1,7 @@
 FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
 
 ARG TORCH_INDEX=cpu
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 DXA_MODEL=/app/models/e5 DXA_DEVICE=cpu \
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 DXA_MODEL=/app/models/radiance DXA_DEVICE=cpu \
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1
 WORKDIR /app
 COPY docker/requirements.txt /tmp/requirements.txt
@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --no-deps torch==2.8.0 torchvision==0.23.0 --inde
 COPY LICENSE /app/LICENSE
 COPY src/__init__.py src/config.py /app/src/
 COPY src/solution /app/src/solution
-COPY models/e5 /app/models/e5
+COPY models/radiance /app/models/radiance
 COPY src/utils/prepare_model.py /app/src/utils/prepare_model.py
 RUN python -m src.utils.prepare_model --verify-only \
     && rm -rf /app/src/utils \

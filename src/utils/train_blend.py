@@ -1,6 +1,6 @@
-"""E5: среднее двух frozen-рецептов с порогами по сохранённым внутренним OOF.
+"""Radiance: среднее двух frozen-рецептов с порогами по сохранённым внутренним OOF.
 
-python -m src.utils.train_blend artifacts/e2-dinov3-large artifacts/e1-medimageinsight --output artifacts/e5-blend
+python -m src.utils.train_blend artifacts/reproduced-dino artifacts/reproduced-mii --output artifacts/reproduced-radiance
 """
 
 import argparse

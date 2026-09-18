@@ -1,4 +1,4 @@
-# Развёртывание E5
+# Развёртывание Radiance
 
 ## Среда
 
@@ -23,21 +23,21 @@ CUDA 12.6-вариант рассчитан на проверенную RTX 3080
 
 ## Веса
 
-Точные головы и конфигурации хранятся в `models/e5/`, SHA256 — в `selection.json`
+Точные головы и конфигурации хранятся в `models/radiance/`, SHA256 — в `selection.json`
 и `weights.json`. Энкодеры прикреплены к
-[GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).
+[GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0).
 
 Репозиторий приватный. Скачайте оба файла через авторизованный браузер и положите
-`dinov3-large-encoder.pt` как `models/e5/member_0/encoder.pt`,
-`medimageinsight-encoder.pt` как `models/e5/member_1/encoder.pt`.
+`dinov3-large-encoder.pt` как `models/radiance/member_0/encoder.pt`,
+`medimageinsight-encoder.pt` как `models/radiance/member_1/encoder.pt`.
 Альтернатива — GitHub CLI с учётной записью, имеющей доступ:
 
 ```bash
-mkdir -p artifacts/release-download models/e5/member_0 models/e5/member_1
-gh release download v1.0.0 --repo sefixnep/LCT26 \
+mkdir -p artifacts/release-download models/radiance/member_0 models/radiance/member_1
+gh release download v1.1.0 --repo sefixnep/LCT26 \
   --pattern '*encoder.pt' --dir artifacts/release-download
-mv artifacts/release-download/dinov3-large-encoder.pt models/e5/member_0/encoder.pt
-mv artifacts/release-download/medimageinsight-encoder.pt models/e5/member_1/encoder.pt
+mv artifacts/release-download/dinov3-large-encoder.pt models/radiance/member_0/encoder.pt
+mv artifacts/release-download/medimageinsight-encoder.pt models/radiance/member_1/encoder.pt
 python3 -m src.utils.prepare_model --verify-only
 ```
 
@@ -56,7 +56,7 @@ python3 -m src.utils.prepare_model
 ```
 
 Приватные GitHub-ссылки без авторизации отвечают 404; это не отсутствие релиза.
-HF-токен не нужен. Отдельно в релиз приложены метаданные E5, лицензии и SHA256.
+HF-токен не нужен. Отдельно в релиз приложены метаданные Radiance, лицензии и SHA256.
 
 Скачивание атомарное: неполный файл не становится весами. Повреждённый уже
 существующий файл вызывает ошибку; удалите указанный файл и повторите подготовку.
@@ -65,13 +65,48 @@ HF-токен не нужен. Отдельно в релиз приложены
 
 ## Сборка и запуск
 
+### Сайт и модель вместе
+
+Из корня репозитория после подготовки весов; Docker Compose ≥2.30:
+
+```bash
+docker compose -f docker/compose.yaml up -d --build --wait --wait-timeout 300
+curl --fail http://127.0.0.1:8000/api/health
+```
+
+Сайт: [localhost:8000](http://127.0.0.1:8000). API: `127.0.0.1:8080`.
+Compose запускает сайт после готовности модели. Оба процесса работают от
+UID 10001, с read-only файловой системой и временным `/tmp`.
+После перезапуска Docker сервисы поднимаются автоматически.
+
+CUDA на Linux с NVIDIA Container Toolkit:
+
+```bash
+docker compose -f docker/compose.yaml -f docker/compose.cuda.yaml up -d --build --wait --wait-timeout 300
+```
+
+Состояние и остановка (для CUDA используйте оба `-f`):
+
+```bash
+docker compose -f docker/compose.yaml ps
+docker compose -f docker/compose.yaml logs --tail 50
+docker compose -f docker/compose.yaml down
+```
+
+Для обновления: получить нужный Git-тег, скачать его веса, выполнить
+`prepare_model --verify-only`, затем повторить `up -d --build --wait`.
+Для отката тем же способом собрать предыдущий тег; формат CSV остаётся прежним.
+Локальные данные и веса при `down` не удаляются.
+
+### Только API
+
 ```bash
 ./docker/run.sh cpu
 # Или на NVIDIA Linux:
 ./docker/run.sh cuda
 ```
 
-Скрипт проверяет веса, собирает образ `lct26-dxa:e5-cpu` / `e5-cuda`, затем запускает
+Скрипт проверяет веса, собирает образ `radiance:cpu` / `cuda`, затем запускает
 API от UID 10001 с файловой системой только для чтения и временным `/tmp`.
 Порт доступен только на `127.0.0.1:8080`. Один worker: каждый процесс загрузил бы
 отдельную копию двух энкодеров. Холодный старт занимает десятки секунд;
@@ -80,9 +115,9 @@ API от UID 10001 с файловой системой только для чт
 Собрать без запуска:
 
 ```bash
-docker build --platform linux/amd64 -f docker/Dockerfile -t lct26-dxa:e5-cpu .
+docker build --platform linux/amd64 -f docker/Dockerfile -t radiance:cpu .
 docker build --platform linux/amd64 --build-arg TORCH_INDEX=cu126 \
-  -f docker/Dockerfile -t lct26-dxa:e5-cuda .
+  -f docker/Dockerfile -t radiance:cuda .
 ```
 
 В образ входят `src/solution`, общая конфигурация, модель, лицензии и зависимости.
@@ -107,7 +142,7 @@ HF_HUB_OFFLINE=1 .venv/bin/uvicorn src.solution.api:app --host 127.0.0.1 --port 
 
 | Переменная API | По умолчанию | Назначение |
 |---|---|---|
-| `DXA_MODEL` | `models/e5`, в образе `/app/models/e5` | каталог комплекта модели |
+| `DXA_MODEL` | `models/radiance`, в образе `/app/models/radiance` | каталог комплекта модели |
 | `DXA_DEVICE` | `cpu` | `cpu` или `cuda` |
 | `DXA_CPU_THREADS` | `2` | число потоков PyTorch |
 | `HF_HUB_OFFLINE` | `1` в образе | исключить сетевые загрузки HF |
@@ -119,12 +154,12 @@ CLI имеет `--model`, `--device`, `--output`; принимает файл, �
 ## Автономная проверка
 
 ```bash
-python3 -m src.utils.check_delivery --image lct26-dxa:e5-cpu --input data/test
+python3 -m src.utils.check_delivery --image radiance:cpu --input data/test
 ```
 
 Проверка стартует новый контейнер с `--network none`, read-only root и пустым
 временным каталогом. Подключается только папка входных снимков, не репозиторий
-и не хостовые веса. Через внутренний HTTP проверяются E5, ZIP, частичный сбой,
+и не хостовые веса. Через внутренний HTTP проверяются Radiance, ZIP, частичный сбой,
 дубли, порядок, ошибки запроса и отсутствие обучающих данных/кода в образе.
 Результат — `artifacts/delivery-checks/container.json`.
 

@@ -65,40 +65,6 @@
       "padding": 0
     }
   ],
-  "training": {
-    "id": "frozen-probability-mean-v1",
-    "members": [
-      "artifacts/e2-dinov3-large",
-      "artifacts/e1-medimageinsight"
-    ],
-    "weights": [
-      0.5,
-      0.5
-    ],
-    "quality_gate": true,
-    "resamples": 2000,
-    "parents": [
-      {
-        "recipe_sha256": "42cecf49807366e29d2167b99bfc2cf7804532e611e1301317febd5a480b1a2b",
-        "features_sha256": "71b11739b25797ce5bdd99285cb3c05d8a532a9ed684a78ec6150fb5d344c6c2"
-      },
-      {
-        "recipe_sha256": "4dd44878cb5715d968af85cd4b10f4c8c2be213eda47d8edc885ebe232f9b836",
-        "features_sha256": "826f7981d0f6bbd885ab133cd1841572a79d449e5994f4c4a20f76b7971842e7"
-      }
-    ],
-    "manifest_sha256": "9049db1fc0190879add3a5ac81d15639d50837b3aabc87503221275f6c4f0315",
-    "code_sha256": {
-      "src/config.py": "8da1cca6e13da0cc13878d005038ceebfe25469a94ea3f812777589ce437effb",
-      "src/solution/model.py": "abdaaabfbf900bc28e2e392e139de369123353919cb5706946dd8be026625dfe",
-      "src/solution/dicom.py": "18dca1bb64ebb732442852ed16fb87509f16e6e6ac56c8942bcd7acea4943b62",
-      "src/solution/medimage_davit.py": "b24c2971ba9a81cf60411bb96f73c4780d75a8c6aafe40fbc2739fe92970a02d",
-      "src/utils/train_blend.py": "60194ce50f50cd23ed94542e5bb6f0229942f2b4fa00ed692f3f18db94f32d45",
-      "src/utils/train.py": "92e7e5d53b9527927e7560e14a24f7a43f9095b5a19bf8c2c9e5f929bb553259",
-      "src/utils/evaluate.py": "ffefe7756482771deb7cd0d75b279d1e69d575697a9432c44fd8ed9450fc514c"
-    },
-    "selection": "Thresholds on averaged inner OOF only; development architecture selection"
-  },
   "training_partition": "all_labeled",
   "heads": {
     "region": {
@@ -125,5 +91,7 @@
     "hip_quality": {
       "threshold": 0.35
     }
-  }
+  },
+  "name": "Radiance",
+  "version": "1.0"
 }

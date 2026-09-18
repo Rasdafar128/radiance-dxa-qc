@@ -1,6 +1,6 @@
-# E5 · DINOv3 Large + MedImageInsight
+# Radiance · DINOv3 Large + MedImageInsight
 
-Итоговая модель контроля качества DXA для ЛЦТ 2026. Версия поставки: `e5-v1`.
+Итоговая модель контроля качества DXA для ЛЦТ 2026. Версия модели: **1.0** (`radiance-v1`); версия ПО: **1.1.0**.
 Это исследовательский прототип для проверки укладки и поля сканирования;
 клиническая пригодность на независимых данных не установлена.
 
@@ -59,19 +59,21 @@ C, балансировки и порогов. Финальные головы �
 ## Файлы и восстановление
 
 - `model.json`, `member_0/model.json`, `member_1/model.json` — архитектуры, коэффициенты,
-  пороги, происхождение и хеши. Они зафиксированы в git.
+  пороги и хеши. Они зафиксированы в git.
+- История обучения ансамбля и исходный хеш — [research/results/radiance_provenance.json](../../research/results/radiance_provenance.json).
+  Название Radiance не меняет веса, предобработку, коэффициенты или метрики.
 - `member_*/encoder.pt` — веса, 2,48 GiB суммарно; вне git, в формате state_dict.
 - `weights.json` — размеры, SHA256 и адреса получения энкодеров.
-- `selection.json` — выбор E5, метрики и контрольные суммы пяти файлов модели.
+- `selection.json` — выбор Radiance, метрики и контрольные суммы пяти файлов модели.
 - `licenses/` — полные условия сторонних весов.
 
 Проверка из корня: `python3 -m src.utils.prepare_model --verify-only`.
 Из локального исследовательского комплекта:
 `python3 -m src.utils.prepare_model --from-directory artifacts/ml-final`.
-Веса размещены в [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).
+Веса размещены в [GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0).
 В приватном репозитории нужен GitHub-доступ: [команды скачивания](../../docs/DEPLOYMENT.md#веса).
 При общедоступных assets подготовщик скачивает их сам по URL из `weights.json`. Токен HF не нужен для инференса и не входит
 в контейнер. Контрольные суммы несовпавших файлов останавливают подготовку.
 
-[Исследование](../../research/ML_CYCLE3.md) · [Обучение](../../docs/TRAINING.md) ·
+[Исследование](../../research/ML_CYCLE3.md) · [Обучение](../../research/TRAINING.md) ·
 [Развёртывание](../../docs/DEPLOYMENT.md)

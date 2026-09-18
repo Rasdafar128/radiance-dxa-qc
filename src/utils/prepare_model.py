@@ -1,4 +1,4 @@
-"""Получить и проверить фиксированный E5 — только стандартная библиотека Python.
+"""Получить и проверить фиксированный Radiance — только стандартная библиотека Python.
 
 python -m src.utils.prepare_model --from-directory artifacts/ml-final
 python -m src.utils.prepare_model --verify-only
@@ -25,7 +25,7 @@ def prepare(destination=C.MODEL, source=None, verify_only=False):
     checks = json.loads((destination / 'selection.json').read_text())['files_sha256']
     for relative, entry in manifest['files'].items():
         if relative not in ('member_0/encoder.pt', 'member_1/encoder.pt') or checks[relative] != entry['sha256']:
-            raise ValueError('Inconsistent E5 weights manifest')
+            raise ValueError('Inconsistent Radiance weights manifest')
         target = destination / relative
         if target.exists():
             if target.stat().st_size != entry['bytes'] or digest(target) != entry['sha256']:
@@ -34,7 +34,7 @@ def prepare(destination=C.MODEL, source=None, verify_only=False):
         if verify_only:
             raise FileNotFoundError(f'Missing weights: {target}')
         if source is None and not entry['url']:
-            raise ValueError('Public weights URL is not configured; use --from-directory with the E5 bundle')
+            raise ValueError('Public weights URL is not configured; use --from-directory with the Radiance bundle')
         if source is None and not entry['url'].startswith('https://'):
             raise ValueError('Weights URL must use HTTPS')
         print(f'Preparing {relative} ({entry["bytes"] / 1024**3:.2f} GiB)', flush=True)
@@ -54,7 +54,7 @@ def prepare(destination=C.MODEL, source=None, verify_only=False):
     for relative, checksum in checks.items():
         if digest(destination / relative) != checksum:
             raise ValueError(f'Model file checksum mismatch: {relative}')
-    print(f'E5 verified: {len(checks)} files', flush=True)
+    print(f'Radiance verified: {len(checks)} files', flush=True)
 
 
 if __name__ == '__main__':

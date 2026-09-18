@@ -24,7 +24,7 @@ CSV contract, with clear handling of failures and model limitations.
 
 ## Positioning
 
-The fixed E5 ensemble combines DINOv3 Large and MedImageInsight to identify the
+The fixed Radiance ensemble combines DINOv3 Large and MedImageInsight to identify the
 anatomical region and five acquisition-quality violations. This is a research
 prototype; it does not diagnose osteoporosis or replace expert review.
 
@@ -52,7 +52,7 @@ precise language. Owner delegated visual direction and implementation choices.
 
 ## Evidence on Hand
 
-Frozen model metadata in `models/e5/`; full local artifacts in `artifacts/`;
+Frozen model metadata in `models/radiance/`; full local artifacts in `artifacts/`;
 research reports and checked aggregate metrics in `research/`. Real DICOM data
 stays outside Git. Any interface example must be clearly labeled synthetic.
 

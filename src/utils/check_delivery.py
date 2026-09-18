@@ -1,6 +1,6 @@
 """Проверить подготовку весов и автономный контейнер без подключения репозитория.
 
-python -m src.utils.check_delivery --image lct26-dxa:e5-cpu --input data/test
+python -m src.utils.check_delivery --image radiance:cpu --input data/test
 Без --image выполняются только быстрые проверки подготовки комплекта.
 """
 
@@ -80,6 +80,7 @@ else:
     raise AssertionError('API did not become ready')
 assert health['backbones'] == ['dinov3-large', 'medimageinsight'], health
 assert health['device'] == 'cpu'
+assert health['model'] == 'Radiance' and health['version'] == '1.0', health
 with urllib.request.urlopen('http://127.0.0.1:8080/openapi.json') as response:
     endpoint = json.load(response)['paths']['/batch']['post']
 assert endpoint['requestBody']['content']['application/zip']['schema']['format'] == 'binary'
@@ -87,7 +88,7 @@ assert 'text/csv' in endpoint['responses']['200']['content']
 assert os.getuid() == 10001
 assert not Path('/app/data').exists() and not Path('/app/src/utils').exists()
 assert not Path('/app/.git').exists()
-assert Path('/app/models/e5/licenses/DINOv3.md').exists()
+assert Path('/app/models/radiance/licenses/DINOv3.md').exists()
 files = sorted(Path('/input').rglob('*.dcm'))
 assert files, 'No DICOM test files'
 

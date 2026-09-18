@@ -60,9 +60,11 @@ async def upstream_health():
         response = await app.state.client.get("/health", timeout=5)
         response.raise_for_status()
         result = response.json()
-        if result.get("status") != "ok" or result.get("backbones") != ["dinov3-large", "medimageinsight"]:
-            raise ValueError("Expected E5")
-        return {"status": "ok", "model": "E5", "busy": app.state.lock.locked()}
+        if (result.get("status") != "ok" or result.get("model") != "Radiance"
+                or result.get("version") != "1.0"
+                or result.get("backbones") != ["dinov3-large", "medimageinsight"]):
+            raise ValueError("Expected Radiance")
+        return {"status": "ok", "model": "Radiance", "busy": app.state.lock.locked()}
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "Сервис модели недоступен. Попробуйте позже.") from None
 
@@ -113,7 +115,7 @@ async def analyze(request: Request):
                 rows = list(csv.DictReader(io.StringIO(response.text)))
                 if not rows or any("processing_status" not in row for row in rows):
                     raise ValueError("Invalid CSV")
-                return {"rows": rows, "csv": response.text, "model": "E5"}
+                return {"rows": rows, "csv": response.text, "model": "Radiance"}
             except httpx.TimeoutException:
                 raise HTTPException(504, "Проверка не завершилась за 10 минут. Попробуйте меньший пакет.") from None
             except (httpx.HTTPError, ValueError):
