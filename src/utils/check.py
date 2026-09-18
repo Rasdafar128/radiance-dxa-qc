@@ -90,7 +90,8 @@ def check(path, device):
             for invalid in (b"not a zip", zip_bytes([]), zip_bytes([("../escape.dcm", b"x")])):
                 assert client.post("/batch", content=invalid, headers={"Content-Type": "application/zip"}).status_code == 400
             assert client.post("/batch", content=payload).status_code == 415
-        with (Path(temp) / "encoder.pt").open("ab") as stream:
+        encoder_file = Path(temp) / ("member_0/encoder.pt" if model.metadata.get("backbone") == "blend" else "encoder.pt")
+        with encoder_file.open("ab") as stream:
             stream.write(b"corrupted")
         try:
             Model.load(temp, device)

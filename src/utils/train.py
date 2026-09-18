@@ -12,6 +12,7 @@ import importlib.metadata
 import json
 import os
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 from time import perf_counter
@@ -23,7 +24,7 @@ import torch
 from sklearn.metrics import f1_score, roc_auc_score
 
 from .. import config as C
-from ..solution.model import BACKBONES, Model, digest, fit_head, probability, targets
+from ..solution.model import BACKBONES, Model, digest, fit_head, preprocessing, probability, targets
 from . import data
 from .evaluate import evaluate
 
@@ -38,22 +39,22 @@ def write_json(path, value):
     temporary.replace(path)
 
 
-def inner_folds(df):
+def inner_folds(df, folds=2, seed=42, attempts=1000):
     group_targets = pd.DataFrame(targets(df))[C.TARGETS].assign(study=df.study.to_numpy())
     groups = group_targets.groupby("study").max().fillna(0)
-    rng, best = np.random.default_rng(42), None
-    for _ in range(1000):
+    rng, best = np.random.default_rng(seed), None
+    for _ in range(attempts):
         assignment = np.empty(len(groups), dtype=int)
-        assignment[rng.permutation(len(groups))] = np.arange(len(groups)) % 2
-        totals = np.stack([groups.to_numpy()[assignment == k].sum(axis=0) for k in range(2)])
-        score = float(((totals - groups.sum().to_numpy() / 2)**2 / np.maximum(groups.sum().to_numpy(), 1)).sum())
+        assignment[rng.permutation(len(groups))] = np.arange(len(groups)) % folds
+        totals = np.stack([groups.to_numpy()[assignment == k].sum(axis=0) for k in range(folds)])
+        score = float(((totals - groups.sum().to_numpy() / folds)**2 / np.maximum(groups.sum().to_numpy(), 1)).sum())
         score += 100 * int((totals == 0).sum())
         if best is None or score < best[0]:
             best = (score, assignment.copy())
     return pd.DataFrame({"study": groups.index, "fold": best[1]})
 
 
-def tune(df, x, split):
+def tune(df, x, split, solver="liblinear", quality_gate=False):
     assignments = df.study.map(split.set_index("study").fold).to_numpy()
     chosen, predictions, balance = {}, {}, {}
     for key, y in targets(df).items():
@@ -72,7 +73,7 @@ def tune(df, x, split):
                 p = np.full(len(df), np.nan)
                 for k in range(2):
                     train, valid = known & (assignments != k), known & (assignments == k)
-                    h = fit_head(x[train], y[train], regularization, balanced)
+                    h = fit_head(x[train], y[train], regularization, balanced, solver)
                     p[valid] = probability(x[valid], h)
                 if key.endswith("quality"):
                     score, threshold = roc_auc_score(y[known], p[known]), 0.5
@@ -84,6 +85,19 @@ def tune(df, x, split):
                     best = (score, dict(C=regularization, balanced=balanced, threshold=threshold,
                                         selection="inner_oof"), p.copy())
         chosen[key], predictions[key] = best[1], best[2]
+    for p in chosen.values():
+        p["solver"] = solver
+    if quality_gate:
+        for region, key in ((C.REGION_SPINE, "spine_quality"), (C.REGION_FEMUR, "hip_quality")):
+            applicable = [t for t, r in zip(C.TARGETS, C.TARGET_REGIONS) if r == region]
+            if any(t not in predictions for t in [key, *applicable]):
+                raise ValueError("Gate requires complete inner OOF scores")
+            mask = (df.anatomical_region == region).to_numpy()
+            any_type = np.logical_or.reduce([predictions[t][mask] >= chosen[t]["threshold"] for t in applicable])
+            _, threshold = max((f1_score(df.quality_class.to_numpy()[mask],
+                                any_type & (predictions[key][mask] >= t), zero_division=0), float(t))
+                               for t in np.arange(20) / 20)
+            chosen[key].update(threshold=threshold, threshold_selection="inner_oof_quality_and_types")
     return chosen, pd.DataFrame(predictions), balance
 
 
@@ -122,15 +136,15 @@ def predictions(model, df, x):
     out["pred_quality"] = result.quality_class
     out["prob_quality"] = result.quality_prob
     truth = targets(df)
-    for target, region in zip(C.TARGETS, C.TARGET_REGIONS):
+    for target, region, label in zip(C.TARGETS, C.TARGET_REGIONS, sum(C.VIOLATIONS.values(), [])):
         out[f"true_{target}"] = truth[target]
         routed = (result.anatomical_region == region).to_numpy()
         out[f"prob_{target}"] = np.where(routed, scores[target], 0)
-        out[f"pred_{target}"] = routed & (scores[target] >= model.heads[target]["threshold"])
+        out[f"pred_{target}"] = result.violation_type.map(lambda s: label in s.split(C.VIOLATION_SEP)) & routed
     return out
 
 
-def run(output, device, resamples, backbone="b0", weights=None):
+def run(output, device, resamples, backbone="b0", weights=None, pooling="global", head_solver="liblinear", features_from=None, outer_seed=None, quality_gate=False):
     started = perf_counter()
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     torch.set_num_threads(2)
@@ -138,6 +152,9 @@ def run(output, device, resamples, backbone="b0", weights=None):
     torch.use_deterministic_algorithms(True)
     output.mkdir(parents=True, exist_ok=True)
     df = manifest(C.ARTIFACTS / "audit")
+    if outer_seed is not None:
+        split = inner_folds(df, folds=3, seed=outer_seed, attempts=10000)
+        df["fold"] = df.study.map(split.set_index("study").fold)
     manifest_text = df.to_csv(index=False)
     versions = {p: importlib.metadata.version(p) for p in
                 ("torch", "torchvision", "numpy", "pandas", "pydicom", "Pillow", "scikit-learn")}
@@ -155,10 +172,19 @@ def run(output, device, resamples, backbone="b0", weights=None):
             encoder_config = encoder_config["vision_config"]
         versions.update({p: importlib.metadata.version(p) for p in
                          ("transformers", "safetensors", "huggingface-hub")})
+        if backbone == "medimageinsight":
+            versions.update({p: importlib.metadata.version(p) for p in ("timm", "einops")})
     code = [C.ROOT / "src" / p for p in ("config.py", "solution/model.py", "solution/dicom.py",
                                           "utils/train.py", "utils/evaluate.py", "utils/data.py")]
-    recipe = dict(id="E0-b0-linear-v1" if backbone == "b0" else f"frozen-{backbone}-v1",
-                  backbone=backbone, source_weights=source, label_policy="criteria_v2", seed=42, resamples=resamples,
+    if backbone == "medimageinsight":
+        code.append(C.ROOT / "src/solution/medimage_davit.py")
+    recipe = dict(id=f"frozen-{backbone}-{pooling}-{head_solver}-gate{int(quality_gate)}-v2",
+                  backbone=backbone, pooling=pooling, head_solver=head_solver, source_weights=source,
+                  quality_gate=quality_gate,
+                  features_from=str(features_from) if features_from else None,
+                  imported_features_sha256=sha(features_from / "features.npz") if features_from else None,
+                  label_policy="criteria_v2", seed=42, resamples=resamples,
+                  outer_seed=outer_seed,
                   manifest_sha256=hashlib.sha256(manifest_text.encode()).hexdigest(),
                   code_sha256={str(p.relative_to(C.ROOT)): sha(p) for p in code}, versions=versions,
                   python=platform.python_version(), device=device,
@@ -168,6 +194,10 @@ def run(output, device, resamples, backbone="b0", weights=None):
     if recipe_path.exists() and json.loads(recipe_path.read_text()) != recipe:
         raise ValueError("Run configuration changed; choose a new output directory")
     write_json(recipe_path, recipe)
+    for p in code:
+        archived = output / "source" / p.relative_to(C.ROOT)
+        archived.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(p, archived)
     (output / "manifest.csv").write_text(manifest_text)
     splits = {}
     # Все назначения фиксируются до первого обращения к энкодеру и головам.
@@ -177,19 +207,40 @@ def run(output, device, resamples, backbone="b0", weights=None):
         splits[name].to_csv(output / f"inner_{name}.csv", index=False)
 
     cache = output / "features.npz"
-    if cache.exists():
-        model = Model(device=device, backbone=backbone, encoder_config=encoder_config)
-        model.encoder.load_state_dict(torch.load(output / "encoder.pt", map_location="cpu", weights_only=True))
-        with np.load(cache, allow_pickle=False) as stored:
+    restored = output if cache.exists() else features_from
+    if restored is not None:
+        if restored != output:
+            metadata = json.loads((restored / "final/model.json").read_text())
+            imported = pd.read_csv(restored / "manifest.csv").drop(columns="fold")
+            current = pd.read_csv(output / "manifest.csv").drop(columns="fold")
+            pd.testing.assert_frame_equal(imported, current)
+            if (metadata.get("backbone", "b0") != backbone or metadata.get("pooling", "global") != pooling or
+                metadata["preprocess"] != preprocessing(backbone) or
+                metadata["source_weights"] != source or sha(restored / "encoder.pt") != metadata["encoder_sha256"]):
+                raise ValueError("Imported frozen cache is incompatible")
+        model = Model(device=device, backbone=backbone, encoder_config=encoder_config, pooling=pooling)
+        model.encoder.load_state_dict(torch.load(restored / "encoder.pt", map_location="cpu", weights_only=True))
+        with np.load(restored / "features.npz", allow_pickle=False) as stored:
             if not np.array_equal(stored["image_ids"], df.image_id.to_numpy()):
                 raise ValueError("Feature cache does not match manifest order")
             x = stored["features"]
+        if restored != output:
+            fresh = model.features([C.DATA / p for p in df.path_to_study.iloc[:3]])
+            np.testing.assert_allclose(x[:3], fresh, atol=1e-5, rtol=1e-5)
+            destination = output / "encoder.pt"
+            if not destination.exists():
+                os.link(restored / "encoder.pt", destination)
+            elif sha(destination) != sha(restored / "encoder.pt"):
+                raise ValueError("Existing encoder differs from imported cache")
+            shutil.copyfile(restored / "features.npz", cache)
     else:
-        model = Model(device=device, pretrained=True, backbone=backbone, weights=weights)
+        model = Model(device=device, pretrained=True, backbone=backbone, weights=weights, pooling=pooling)
         x = model.features([C.DATA / p for p in df.path_to_study])
         torch.save({k: v.detach().cpu() for k, v in model.encoder.state_dict().items()}, output / "encoder.pt")
         np.savez_compressed(cache, features=x, image_ids=df.image_id.to_numpy(dtype=str))
     model.metadata["training"] = recipe
+    model.metadata["quality_gate"] = quality_gate
+    model.metadata["recipe"] = recipe["id"]
     if x.shape != (len(df), model.metadata["dimensions"]) or not np.isfinite(x).all():
         raise ValueError("Invalid frozen feature cache")
     model.metadata["source_weights"] = source
@@ -206,7 +257,7 @@ def run(output, device, resamples, backbone="b0", weights=None):
         train, valid = (df.fold != fold).to_numpy(), (df.fold == fold).to_numpy()
         if set(df[train].study) & set(df[valid].study):
             raise ValueError("Study leakage")
-        parameters, inner, balance = tune(df[train].reset_index(drop=True), x[train], splits[fold])
+        parameters, inner, balance = tune(df[train].reset_index(drop=True), x[train], splits[fold], head_solver, quality_gate)
         write_json(destination / "selection.json", dict(parameters=parameters, balance=balance))
         inner.insert(0, "image_id", df[train].image_id.to_numpy())
         inner.to_csv(destination / "inner_predictions.csv", index=False)
@@ -232,7 +283,7 @@ def run(output, device, resamples, backbone="b0", weights=None):
     subset = oof[~((oof.anatomical_region == C.REGION_FEMUR) & oof.study.isin(disputed))].reset_index(drop=True)
     report["side_sensitivity"] = dict(excluded_paired_studies=len(disputed), fixed_oof=evaluate(subset, 0))
     write_json(output / "metrics.json", report)
-    parameters, inner, balance = tune(df, x, splits["final"])
+    parameters, inner, balance = tune(df, x, splits["final"], head_solver, quality_gate)
     write_json(output / "final_selection.json", dict(parameters=parameters, balance=balance))
     inner.insert(0, "image_id", df.image_id.to_numpy())
     inner.to_csv(output / "final_inner_predictions.csv", index=False)
@@ -257,5 +308,11 @@ if __name__ == "__main__":
     parser.add_argument("--resamples", type=int, default=2000)
     parser.add_argument("--backbone", choices=BACKBONES, default="b0")
     parser.add_argument("--weights", type=Path)
+    parser.add_argument("--pooling", choices=("global", "spatial"), default="global")
+    parser.add_argument("--head-solver", choices=("liblinear", "lbfgs"), default="liblinear")
+    parser.add_argument("--features-from", type=Path)
+    parser.add_argument("--outer-seed", type=int, help="Sensitivity split; never select seed by model results")
+    parser.add_argument("--quality-gate", action="store_true", help="Select a quality gate using inner OOF only")
     args = parser.parse_args()
-    run(args.output, args.device, args.resamples, args.backbone, args.weights)
+    run(args.output, args.device, args.resamples, args.backbone, args.weights,
+        args.pooling, args.head_solver, args.features_from, args.outer_seed, args.quality_gate)
