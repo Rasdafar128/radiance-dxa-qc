@@ -52,12 +52,12 @@ DXA_UPSTREAM_URL=http://127.0.0.1:18081 web/.venv/bin/uvicorn web.app:app \
 ## Веб-контейнер
 
 ```bash
-docker build -f web/Dockerfile -t radiance-web:1.1.0 .
+docker build -f web/Dockerfile -t radiance-web:1.0 .
 # Docker Desktop: ML API/SSH-туннель работает на хосте.
 docker run --rm --name lct26-web --read-only --tmpfs /tmp:rw,nosuid,size=600m \
   --cap-drop ALL --security-opt no-new-privileges \
   -p 127.0.0.1:8000:8000 \
-  -e DXA_UPSTREAM_URL=http://host.docker.internal:18081 radiance-web:1.1.0
+  -e DXA_UPSTREAM_URL=http://host.docker.internal:18081 radiance-web:1.0
 ```
 
 На Linux VDS с туннелем на loopback хоста:
@@ -66,7 +66,7 @@ docker run --rm --name lct26-web --read-only --tmpfs /tmp:rw,nosuid,size=600m \
 docker run -d --name lct26-web --restart unless-stopped \
   --network host --read-only --tmpfs /tmp:rw,nosuid,size=600m \
   --cap-drop ALL --security-opt no-new-privileges \
-  -e DXA_UPSTREAM_URL=http://127.0.0.1:18081 radiance-web:1.1.0 \
+  -e DXA_UPSTREAM_URL=http://127.0.0.1:18081 radiance-web:1.0 \
   uvicorn web.app:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 

@@ -25,7 +25,7 @@ CUDA 12.6-вариант рассчитан на проверенную RTX 3080
 
 Точные головы и конфигурации хранятся в `models/radiance/`, SHA256 — в `selection.json`
 и `weights.json`. Энкодеры прикреплены к
-[GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0).
+[GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).
 
 **Одного клона репозитория или архива Source code (zip) недостаточно:** перед
 сборкой Docker скачайте оба файла из раздела **Assets** указанного релиза.
@@ -44,7 +44,7 @@ CUDA 12.6-вариант рассчитан на проверенную RTX 3080
 
 ```bash
 mkdir -p artifacts/release-download models/radiance/member_0 models/radiance/member_1
-gh release download v1.1.0 --repo sefixnep/LCT26 \
+gh release download v1.0.0 --repo sefixnep/LCT26 \
   --pattern '*encoder.pt' --dir artifacts/release-download
 mv artifacts/release-download/dinov3-large-encoder.pt models/radiance/member_0/encoder.pt
 mv artifacts/release-download/medimageinsight-encoder.pt models/radiance/member_1/encoder.pt

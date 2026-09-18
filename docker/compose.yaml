@@ -17,7 +17,7 @@ services:
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
   web:
-    image: radiance-web:1.1.0
+    image: radiance-web:1.0
     build:
       context: ..
       dockerfile: web/Dockerfile

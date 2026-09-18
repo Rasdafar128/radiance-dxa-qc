@@ -4,7 +4,7 @@
 качество, типы нарушения → CSV. Модель команды **Radiance**: DINOv3 Large + MedImageInsight.
 Инференс работает без сети, обучения и обращения к облачным моделям.
 
-> **Для запуска модели нужны веса из [GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0).**
+> **Для запуска модели нужны веса из [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).**
 > Клонирование репозитория или скачивание **Source code (zip)** не включает два файла энкодеров.
 > Скачайте их из раздела **Assets** и разместите по [инструкции](docs/DEPLOYMENT.md#веса)
 > **до сборки Docker**. Головы и конфигурации модели уже находятся в репозитории.
@@ -22,7 +22,7 @@
 | Сайт + модель на одном сервере | `docker/compose.yaml`, CUDA — `docker/compose.cuda.yaml` |
 | VDS + отдельный GPU-сервер | [Подключение сайта](docs/WEBSITE.md) |
 | Модель Radiance 1.0 | [Карточка модели](models/radiance/README.md) |
-| Обязательные веса и дополнительные файлы поставки | [GitHub Release v1.1.0 → Assets](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0) |
+| Обязательные веса и дополнительные файлы поставки | [GitHub Release v1.0.0 → Assets](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0) |
 | Установка и эксплуатация | [Развёртывание](docs/DEPLOYMENT.md) |
 | Исследования и воспроизведение | [research/](research/README.md) |
 
@@ -61,7 +61,7 @@ docker compose -f docker/compose.yaml up -d --build --wait --wait-timeout 300
 # docker compose -f docker/compose.yaml -f docker/compose.cuda.yaml up -d --build --wait --wait-timeout 300
 ```
 
-Веса прикреплены к [GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0),
+Веса прикреплены к [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0),
 контрольные суммы — в `models/radiance/weights.json`. Репозиторий приватный: для скачивания
 нужен доступ к GitHub, **HF-токен не требуется**. При открытом доступе к assets
 `python3 -m src.utils.prepare_model` скачивает и проверяет их автоматически.

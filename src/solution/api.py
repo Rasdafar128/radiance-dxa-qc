@@ -24,7 +24,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="Radiance · DXA quality control", version="1.1.0", lifespan=lifespan)
+app = FastAPI(title="Radiance · DXA quality control", version="1.0", lifespan=lifespan)
 
 
 @app.get("/health")

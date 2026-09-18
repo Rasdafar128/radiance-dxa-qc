@@ -34,7 +34,7 @@ GPU-инференс проверяется там непосредственн�
 
 Машинные результаты остаются локально в `artifacts/delivery-checks/`:
 `container.json`, `checks_cuda.json`, `technical_predictions_cuda.csv`.
-Повторные проверки версии 1.1 хранятся в `artifacts/radiance-checks/`.
+Повторные проверки Radiance 1.0 хранятся в `artifacts/radiance-checks/`.
 Последний файл содержит идентификаторы входных исследований и не публикуется.
 
 ## Сайт и повторный аудит
@@ -89,7 +89,7 @@ HF_HUB_OFFLINE=1 python -m src.utils.check --device cuda
 
 ## GitHub Release и лицензии
 
-Поставка размещена в [релизе v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0)
+Поставка размещена в [релизе v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0)
 того же репозитория. Код и документы ведутся в `main`. К релизу приложены два
 энкодера, метаданные Radiance, лицензии и контрольные суммы; веса не добавлены в git.
 Размеры и SHA256 загруженных энкодеров сверены с GitHub assets и исходным комплектом.
