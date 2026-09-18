@@ -96,3 +96,56 @@ The verdict in `.impeccable/review/verdict.md` records all four prior findings
 resolved: mobile detail reveal/return, active row targets, finding priority,
 and consistent SVG arrows. It reports no regressions attributable to that fix
 batch; no broader approval or clinical validation is implied.
+
+## DICOM viewer extension · 2026-09-19
+
+This ordinary extension retains the direction contract and seed above. The
+earlier results composition and inspection-focus description record the
+pre-viewer surface; the following describes the current results flow. Root
+DESIGN.md and `.impeccable/design.json` are preserved without a token refresh.
+
+- The results heading replaces the upload introduction after processing. A
+  full-frame PNG preview of the selected DICOM leads the working column;
+  applicable model findings occupy the existing side margin. The ruled file
+  list spans both columns below. At 800px and below these become viewer, findings,
+  then list; the 375px capture retains readable controls and wrapped copy.
+- The dark image well is a functional viewing surface inside the light sheet,
+  not a replacement visual world. It contains the image at fit scale and shows
+  its filename, region and preview dimensions above. Reduced previews are
+  labeled when the response marks them as reduced. There are no violation
+  masks, coordinates or heatmaps.
+- Zoom runs from 1× to 4× in 0.5× steps. Pointer dragging and arrow keys pan an
+  enlarged image; movement is bounded by its contained dimensions. `+` / `−`
+  zoom and `0` resets. “Вписать” resets zoom and position; “Сбросить” also restores
+  brightness and contrast. Native sliders control brightness (50–150%) and
+  contrast (50–200%); these display adjustments do not submit another model
+  request or change result records. Fullscreen is offered when supported.
+- Previous/next controls follow the active category and display its position.
+  Selecting a table row now focuses the viewer filename and reveals the image;
+  “К списку файлов” returns to that row and restores its filename-button focus.
+  Findings, failures and clean rows retain the existing stable display order.
+  Filters and display adjustments leave the downloaded CSV string unchanged.
+- A new upload clears both the image source and cached selection identity.
+  Selecting a different image resets its view settings. Missing previews,
+  failed files, empty categories and the synthetic example use explicit text
+  in a compact image well; image tools are hidden. Empty viewers align to the
+  top of their grid row and do not stretch to the findings column. The example
+  retains both the synthetic-record notice and the statement that it has no DICOM.
+
+Current saved captures were opened during documentation:
+
+| State | Width | Evidence | Observed composition |
+| --- | --- | --- | --- |
+| Uploaded image and findings | 1440px | `.impeccable/review/viewer-desktop.png` | Full-frame preview beside the findings; file list below. |
+| Uploaded image and findings | 375px | `.impeccable/review/viewer-mobile.png` | Viewer, adjustments, findings and list stack; no visible cut-off copy. |
+| Failed file, error filter | 375px | `.impeccable/review/viewer-mobile-failure.png` | Explicit failure message, compact viewer and one filtered row. |
+| Synthetic example | 1440px | `.impeccable/review/viewer-desktop-demo.png` | No invented image; empty sheet ends at its message, while the open margin continues. |
+
+The initial viewer review in `.impeccable/review/viewer-finish-review.md`
+requested fixes for repeat-upload identity, pan bounds and empty-card stretch.
+Current source contains those fixes; the saved demo visibly shows the compact
+card. Static captures do not establish interactive regression results. The
+separate verdict in `.impeccable/review/viewer-verdict.md` marks all three fixes
+resolved (`ship`); this covers those fixes only, not a whole-surface or clinical
+approval. Evidence scope and inherited documentation drift are recorded in
+`.impeccable/review/viewer-documentation.md`.
