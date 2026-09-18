@@ -1,0 +1,26 @@
+{
+  "source": "raw DICOM through Model.predict",
+  "device": "cuda",
+  "cached_features_used": false,
+  "final_all_data_model_used": false,
+  "folds": [
+    {
+      "fold": 0,
+      "images": 82,
+      "all_decisions_match": true,
+      "max_probability_error": 3.608224830031759e-15
+    },
+    {
+      "fold": 1,
+      "images": 87,
+      "all_decisions_match": true,
+      "max_probability_error": 5.3013149425851225e-15
+    },
+    {
+      "fold": 2,
+      "images": 80,
+      "all_decisions_match": true,
+      "max_probability_error": 3.774758283725532e-15
+    }
+  ]
+}

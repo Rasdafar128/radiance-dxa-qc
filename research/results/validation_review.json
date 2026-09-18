@@ -1,0 +1,255 @@
+{
+  "raw_files": 499,
+  "unique_pixels": 252,
+  "studies": 100,
+  "patient_id_distinct": 1,
+  "dicom_study_groups_verified": true,
+  "cross_study_exact_duplicates": 0,
+  "runs": [
+    {
+      "run": "e5-blend",
+      "oof_sha256": "c85ce5c5ee914b9923f8ec927be02fb91eeaef7e812bf7e209564a4e02efa234",
+      "quality": {
+        "images": 249,
+        "studies": 100,
+        "positives": 72,
+        "f1": 0.6134969325153374,
+        "auc": 0.8047708725674828,
+        "precision": 0.5494505494505495,
+        "recall": 0.6944444444444444
+      },
+      "macro_f1": 0.45999999999999996,
+      "per_type": {
+        "spine_position": {
+          "positives": 6,
+          "f1": 0.6666666666666666
+        },
+        "spine_axis": {
+          "positives": 10,
+          "f1": 0.125
+        },
+        "spine_objects": {
+          "positives": 17,
+          "f1": 0.7428571428571429
+        },
+        "hip_position": {
+          "positives": 36,
+          "f1": 0.575
+        },
+        "hip_roi": {
+          "positives": 7,
+          "f1": 0.19047619047619047
+        }
+      },
+      "folds": {
+        "0": {
+          "images": 82,
+          "studies": 34,
+          "positives": 23,
+          "f1": 0.59375,
+          "auc": 0.7966101694915254,
+          "precision": 0.4634146341463415,
+          "recall": 0.8260869565217391
+        },
+        "1": {
+          "images": 87,
+          "studies": 33,
+          "positives": 24,
+          "f1": 0.6296296296296297,
+          "auc": 0.8048941798941799,
+          "precision": 0.5666666666666667,
+          "recall": 0.7083333333333334
+        },
+        "2": {
+          "images": 80,
+          "studies": 33,
+          "positives": 25,
+          "f1": 0.6222222222222222,
+          "auc": 0.8247272727272728,
+          "precision": 0.7,
+          "recall": 0.56
+        }
+      },
+      "fold_positive_types": {
+        "0": {
+          "spine_position": 2,
+          "spine_axis": 3,
+          "spine_objects": 5,
+          "hip_position": 11,
+          "hip_roi": 3
+        },
+        "1": {
+          "spine_position": 2,
+          "spine_axis": 3,
+          "spine_objects": 6,
+          "hip_position": 13,
+          "hip_roi": 2
+        },
+        "2": {
+          "spine_position": 2,
+          "spine_axis": 4,
+          "spine_objects": 6,
+          "hip_position": 12,
+          "hip_roi": 2
+        }
+      },
+      "regions": {
+        "Поясничный отдел позвоночника": {
+          "images": 99,
+          "studies": 99,
+          "positives": 31,
+          "f1": 0.625,
+          "auc": 0.7836812144212524,
+          "precision": 0.6060606060606061,
+          "recall": 0.6451612903225806
+        },
+        "Проксимальный отдел бедра": {
+          "images": 150,
+          "studies": 78,
+          "positives": 41,
+          "f1": 0.6060606060606061,
+          "auc": 0.8250167822779145,
+          "precision": 0.5172413793103449,
+          "recall": 0.7317073170731707
+        }
+      },
+      "equal_study_weight_quality": {
+        "images": 249,
+        "studies": 100,
+        "positives": 72,
+        "f1": 0.6134020618556704,
+        "auc": 0.8078577256572308,
+        "precision": 0.5384615384615385,
+        "recall": 0.7125748502994016
+      },
+      "always_positive_f1": 0.4485981308411215,
+      "excluded_unlabeled": 3
+    },
+    {
+      "run": "e5-blend-split137",
+      "oof_sha256": "14075ec106edda0d3f92149c485092e1d8057a67df9dabd0d08ce71657e303d3",
+      "quality": {
+        "images": 249,
+        "studies": 100,
+        "positives": 72,
+        "f1": 0.5771812080536913,
+        "auc": 0.7543157564344005,
+        "precision": 0.5584415584415584,
+        "recall": 0.5972222222222222
+      },
+      "macro_f1": 0.4205171299288947,
+      "per_type": {
+        "spine_position": {
+          "positives": 6,
+          "f1": 0.6
+        },
+        "spine_axis": {
+          "positives": 10,
+          "f1": 0.15384615384615385
+        },
+        "spine_objects": {
+          "positives": 17,
+          "f1": 0.7058823529411765
+        },
+        "hip_position": {
+          "positives": 36,
+          "f1": 0.5
+        },
+        "hip_roi": {
+          "positives": 7,
+          "f1": 0.14285714285714285
+        }
+      },
+      "folds": {
+        "0": {
+          "images": 89,
+          "studies": 34,
+          "positives": 25,
+          "f1": 0.5862068965517241,
+          "auc": 0.7112499999999999,
+          "precision": 0.5151515151515151,
+          "recall": 0.68
+        },
+        "1": {
+          "images": 78,
+          "studies": 33,
+          "positives": 23,
+          "f1": 0.5833333333333334,
+          "auc": 0.7770750988142292,
+          "precision": 0.56,
+          "recall": 0.6086956521739131
+        },
+        "2": {
+          "images": 82,
+          "studies": 33,
+          "positives": 24,
+          "f1": 0.5581395348837209,
+          "auc": 0.7701149425287357,
+          "precision": 0.631578947368421,
+          "recall": 0.5
+        }
+      },
+      "fold_positive_types": {
+        "0": {
+          "spine_position": 2,
+          "spine_axis": 4,
+          "spine_objects": 6,
+          "hip_position": 11,
+          "hip_roi": 2
+        },
+        "1": {
+          "spine_position": 2,
+          "spine_axis": 3,
+          "spine_objects": 5,
+          "hip_position": 12,
+          "hip_roi": 3
+        },
+        "2": {
+          "spine_position": 2,
+          "spine_axis": 3,
+          "spine_objects": 6,
+          "hip_position": 13,
+          "hip_roi": 2
+        }
+      },
+      "regions": {
+        "Поясничный отдел позвоночника": {
+          "images": 99,
+          "studies": 99,
+          "positives": 31,
+          "f1": 0.5901639344262295,
+          "auc": 0.7613851992409867,
+          "precision": 0.6,
+          "recall": 0.5806451612903226
+        },
+        "Проксимальный отдел бедра": {
+          "images": 150,
+          "studies": 78,
+          "positives": 41,
+          "f1": 0.5681818181818182,
+          "auc": 0.7390915193555605,
+          "precision": 0.5319148936170213,
+          "recall": 0.6097560975609756
+        }
+      },
+      "equal_study_weight_quality": {
+        "images": 249,
+        "studies": 100,
+        "positives": 72,
+        "f1": 0.5674157303370795,
+        "auc": 0.7596216343294938,
+        "precision": 0.5343915343915352,
+        "recall": 0.6047904191616775
+      },
+      "always_positive_f1": 0.4485981308411215,
+      "excluded_unlabeled": 3
+    }
+  ],
+  "independent_test": false,
+  "patient_independence_confirmed": false,
+  "limitations": [
+    "Architecture selected on development OOF; not an unbiased final test",
+    "Patient independence and all hip-side assignments cannot be proven from anonymized data",
+    "Macro-F1 is the mean of five applicable region/type targets; the official aggregation is not supplied"
+  ]
+}
