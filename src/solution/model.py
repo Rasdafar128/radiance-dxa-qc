@@ -1,8 +1,9 @@
-"""EfficientNet-B0 и линейные головы — автономный первый рецепт DXA."""
+"""Замороженный визуальный энкодер и линейные головы DXA."""
 
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 from time import perf_counter
 
@@ -17,6 +18,21 @@ from .dicom import PREPROCESS, prepare
 
 LOG = logging.getLogger(__name__)
 HEADS = ["region", *C.TARGETS, "spine_quality", "hip_quality"]
+BACKBONES = ("b0", "dinov2-large", "dinov3-large", "medsiglip")
+
+
+def digest(path):
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def preprocessing(backbone):
+    if backbone not in BACKBONES:
+        raise ValueError(f"Unsupported backbone: {backbone}")
+    recipe = dict(PREPROCESS, size=224 if backbone == "b0" else 448)
+    if backbone == "medsiglip":
+        recipe.update(mean=[0.5] * 3, std=[0.5] * 3)
+    return recipe
 
 
 def report_frame(rows):
@@ -58,19 +74,52 @@ def targets(df):
 
 
 class Model:
-    def __init__(self, device="cpu", pretrained=False):
+    def __init__(self, device="cpu", pretrained=False, backbone="b0", weights=None, encoder_config=None):
         self.device = torch.device(device)
-        self.encoder = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None)
-        self.encoder.classifier = torch.nn.Identity()
+        recipe = preprocessing(backbone)
+        if backbone == "b0":
+            self.encoder = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None)
+            self.encoder.classifier = torch.nn.Identity()
+            dimensions = 1280
+        else:
+            from transformers import AutoConfig, AutoModel, SiglipVisionConfig, SiglipVisionModel
+
+            if pretrained:
+                if weights is None:
+                    raise ValueError("A local pretrained snapshot is required")
+                encoder_class = SiglipVisionModel if backbone == "medsiglip" else AutoModel
+                self.encoder = encoder_class.from_pretrained(weights, local_files_only=True,
+                                                             attn_implementation="eager")
+            else:
+                config = dict(encoder_config)
+                model_type = config.pop("model_type")
+                if backbone == "medsiglip":
+                    self.encoder = SiglipVisionModel(SiglipVisionConfig(**config, attn_implementation="eager"))
+                else:
+                    self.encoder = AutoModel.from_config(AutoConfig.for_model(model_type, **config),
+                                                         attn_implementation="eager")
+            expected = {"dinov2-large": "dinov2", "dinov3-large": "dinov3_vit", "medsiglip": "siglip_vision_model"}
+            if self.encoder.config.model_type != expected[backbone] or self.encoder.config.hidden_size != (1152 if backbone == "medsiglip" else 1024):
+                raise ValueError("Checkpoint does not match the requested backbone")
+            dimensions = self.encoder.config.hidden_size
         self.encoder.to(self.device).eval()
         self.heads = {}
-        self.metadata = {"schema": 1, "recipe": "E0-b0-linear-v1", "preprocess": PREPROCESS,
+        self.metadata = {"schema": 1, "recipe": "E0-b0-linear-v1" if backbone == "b0" else f"frozen-{backbone}-v1",
+                         "backbone": backbone, "dimensions": dimensions, "preprocess": recipe,
                          "targets": C.TARGETS, "regions": [C.REGION_SPINE, C.REGION_FEMUR]}
+        if backbone != "b0":
+            self.metadata["encoder_config"] = self.encoder.config.to_dict()
 
     @torch.inference_mode()
     def encode(self, ds):
         tensor = torch.from_numpy(prepare(ds, self.metadata["preprocess"])).unsqueeze(0).to(self.device)
-        return self.encoder(tensor).cpu().numpy()[0]
+        output = self.encoder(tensor)
+        backbone = self.metadata.get("backbone", "b0")
+        if backbone == "medsiglip":
+            output = output.pooler_output
+        elif backbone != "b0":
+            output = output.last_hidden_state[:, 0]
+        return output.cpu().numpy()[0]
 
     def features(self, images):
         # ponytail: один кадр на forward гарантирует независимость от состава пакета.
@@ -121,29 +170,37 @@ class Model:
             rows.append(row)
         return report_frame(rows)
 
-    def save(self, path):
+    def save(self, path, encoder_path=None):
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
-        torch.save({k: v.detach().cpu() for k, v in self.encoder.state_dict().items()}, path / "encoder.pt")
+        temporary = path / "encoder.tmp"
+        if encoder_path is None:
+            torch.save({k: v.detach().cpu() for k, v in self.encoder.state_dict().items()}, temporary)
+        else:
+            # Все головы frozen-опыта используют один неизменный файл весов.
+            temporary.unlink(missing_ok=True)
+            os.link(encoder_path, temporary)
+        temporary.replace(path / "encoder.pt")
         payload = dict(self.metadata, heads=self.heads,
-                       encoder_sha256=hashlib.sha256((path / "encoder.pt").read_bytes()).hexdigest())
+                       encoder_sha256=digest(path / "encoder.pt"))
         (path / "model.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
 
     @classmethod
     def load(cls, path, device="cpu"):
         path = Path(path)
         payload = json.loads((path / "model.json").read_text())
-        if payload["schema"] != 1 or payload["targets"] != C.TARGETS or payload["preprocess"] != PREPROCESS:
+        backbone = payload.get("backbone", "b0")
+        if payload["schema"] != 1 or payload["targets"] != C.TARGETS or payload["preprocess"] != preprocessing(backbone):
             raise ValueError("Incompatible model metadata")
-        if hashlib.sha256((path / "encoder.pt").read_bytes()).hexdigest() != payload["encoder_sha256"]:
+        if digest(path / "encoder.pt") != payload["encoder_sha256"]:
             raise ValueError("Encoder checksum mismatch")
-        model = cls(device=device)
+        model = cls(device=device, backbone=backbone, encoder_config=payload.get("encoder_config"))
         model.encoder.load_state_dict(torch.load(path / "encoder.pt", map_location="cpu", weights_only=True))
         model.heads = payload.pop("heads")
         if set(model.heads) != set(HEADS):
             raise ValueError("Incomplete model artifact")
         for head in model.heads.values():
-            if len(head["coef"]) != 1280 or not np.isfinite([*head["coef"], head["intercept"], head["threshold"]]).all():
+            if len(head["coef"]) != model.metadata["dimensions"] or not np.isfinite([*head["coef"], head["intercept"], head["threshold"]]).all():
                 raise ValueError("Invalid linear head")
             if not 0 <= head["threshold"] <= 1:
                 raise ValueError("Invalid threshold")

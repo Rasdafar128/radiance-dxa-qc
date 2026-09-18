@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
 import platform
 import subprocess
 from pathlib import Path
@@ -22,13 +23,13 @@ import torch
 from sklearn.metrics import f1_score, roc_auc_score
 
 from .. import config as C
-from ..solution.model import Model, fit_head, probability, targets
+from ..solution.model import BACKBONES, Model, digest, fit_head, probability, targets
 from . import data
 from .evaluate import evaluate
 
 
 def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return digest(path)
 
 
 def write_json(path, value):
@@ -129,8 +130,9 @@ def predictions(model, df, x):
     return out
 
 
-def run(output, device, resamples):
+def run(output, device, resamples, backbone="b0", weights=None):
     started = perf_counter()
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     torch.set_num_threads(2)
     torch.manual_seed(42)
     torch.use_deterministic_algorithms(True)
@@ -139,14 +141,29 @@ def run(output, device, resamples):
     manifest_text = df.to_csv(index=False)
     versions = {p: importlib.metadata.version(p) for p in
                 ("torch", "torchvision", "numpy", "pandas", "pydicom", "Pillow", "scikit-learn")}
+    source = "https://download.pytorch.org/models/efficientnet_b0_rwightman-7f5810bc.pth"
+    encoder_config = None
+    if backbone != "b0":
+        if weights is None:
+            raise ValueError("Use --weights with a downloaded local snapshot")
+        source = json.loads((weights / "source.json").read_text())
+        for name, checksum in source["sha256"].items():
+            if sha(weights / name) != checksum:
+                raise ValueError(f"Source checksum mismatch: {name}")
+        encoder_config = json.loads((weights / "config.json").read_text())
+        if backbone == "medsiglip":
+            encoder_config = encoder_config["vision_config"]
+        versions.update({p: importlib.metadata.version(p) for p in
+                         ("transformers", "safetensors", "huggingface-hub")})
     code = [C.ROOT / "src" / p for p in ("config.py", "solution/model.py", "solution/dicom.py",
                                           "utils/train.py", "utils/evaluate.py", "utils/data.py")]
-    recipe = dict(id="E0-b0-linear-v1", label_policy="criteria_v2", seed=42, resamples=resamples,
+    recipe = dict(id="E0-b0-linear-v1" if backbone == "b0" else f"frozen-{backbone}-v1",
+                  backbone=backbone, source_weights=source, label_policy="criteria_v2", seed=42, resamples=resamples,
                   manifest_sha256=hashlib.sha256(manifest_text.encode()).hexdigest(),
                   code_sha256={str(p.relative_to(C.ROOT)): sha(p) for p in code}, versions=versions,
                   python=platform.python_version(), device=device,
-                  hypothesis="Frozen B0, nested L2 logistic heads, complete inference path",
-                  selection="Technical baseline; no claim of winning model")
+                  hypothesis=f"Frozen {backbone}, nested L2 logistic heads, complete inference path",
+                  selection="Development comparison; no independent test claim")
     recipe_path = output / "recipe.json"
     if recipe_path.exists() and json.loads(recipe_path.read_text()) != recipe:
         raise ValueError("Run configuration changed; choose a new output directory")
@@ -161,19 +178,21 @@ def run(output, device, resamples):
 
     cache = output / "features.npz"
     if cache.exists():
-        model = Model(device=device)
+        model = Model(device=device, backbone=backbone, encoder_config=encoder_config)
         model.encoder.load_state_dict(torch.load(output / "encoder.pt", map_location="cpu", weights_only=True))
         with np.load(cache, allow_pickle=False) as stored:
             if not np.array_equal(stored["image_ids"], df.image_id.to_numpy()):
                 raise ValueError("Feature cache does not match manifest order")
             x = stored["features"]
     else:
-        model = Model(device=device, pretrained=True)
+        model = Model(device=device, pretrained=True, backbone=backbone, weights=weights)
         x = model.features([C.DATA / p for p in df.path_to_study])
         torch.save({k: v.detach().cpu() for k, v in model.encoder.state_dict().items()}, output / "encoder.pt")
         np.savez_compressed(cache, features=x, image_ids=df.image_id.to_numpy(dtype=str))
     model.metadata["training"] = recipe
-    model.metadata["source_weights"] = "https://download.pytorch.org/models/efficientnet_b0_rwightman-7f5810bc.pth"
+    if x.shape != (len(df), model.metadata["dimensions"]) or not np.isfinite(x).all():
+        raise ValueError("Invalid frozen feature cache")
+    model.metadata["source_weights"] = source
     print(f"Frozen features: {x.shape}, elapsed {perf_counter() - started:.1f}s", flush=True)
 
     for fold in range(3):
@@ -193,11 +212,12 @@ def run(output, device, resamples):
         inner.to_csv(destination / "inner_predictions.csv", index=False)
         model.fit(df[train], features=x[train], parameters=parameters, verbose=False)
         model.metadata["training_partition"] = f"outer_train_{fold}"
-        model.save(destination)
+        model.save(destination, encoder_path=output / "encoder.pt")
         reloaded = Model.load(destination, device)
         before, _ = model.classify(x[valid])
         after, _ = reloaded.classify(x[valid])
         pd.testing.assert_frame_equal(before, after)
+        del reloaded
         predictions(model, df[valid], x[valid]).to_csv(destination / "oof.csv", index=False)
         write_json(destination / "complete.json", dict(oof_sha256=sha(destination / "oof.csv")))
         print(f"Outer fold {fold} completed", flush=True)
@@ -218,7 +238,7 @@ def run(output, device, resamples):
     inner.to_csv(output / "final_inner_predictions.csv", index=False)
     model.fit(df, features=x, parameters=parameters, verbose=False)
     model.metadata["training_partition"] = "all_labeled"
-    model.save(output / "final")
+    model.save(output / "final", encoder_path=output / "encoder.pt")
     hardware = dict(python=platform.python_version(), platform=platform.platform(), versions=versions,
                     elapsed_seconds=perf_counter() - started,
                     peak_vram_bytes=torch.cuda.max_memory_allocated() if device.startswith("cuda") else 0)
@@ -235,5 +255,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, default=C.ARTIFACTS / "e0")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--resamples", type=int, default=2000)
+    parser.add_argument("--backbone", choices=BACKBONES, default="b0")
+    parser.add_argument("--weights", type=Path)
     args = parser.parse_args()
-    run(args.output, args.device, args.resamples)
+    run(args.output, args.device, args.resamples, args.backbone, args.weights)

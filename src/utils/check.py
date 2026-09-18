@@ -1,4 +1,4 @@
-"""Проверка E0 — сохранение, независимость пакета, ошибки DICOM/ZIP и API.
+"""Проверка модели — сохранение, независимость пакета, ошибки DICOM/ZIP и API.
 
     python -m src.utils.check --model artifacts/e0/final --device cuda
 """
@@ -47,7 +47,8 @@ def check(path, device):
     reverse = deepcopy(ds)
     reverse.PhotometricInterpretation = "MONOCHROME1"
     assert np.array_equal(pixels(reverse), 255 - normal)
-    assert prepare(ds).shape == (3, 224, 224)
+    recipe = model.metadata["preprocess"]
+    assert prepare(ds, recipe).shape == (3, recipe["size"], recipe["size"])
     constant = deepcopy(ds)
     constant.PixelData = np.zeros_like(ds.pixel_array).tobytes()
     try:
@@ -89,6 +90,13 @@ def check(path, device):
             for invalid in (b"not a zip", zip_bytes([]), zip_bytes([("../escape.dcm", b"x")])):
                 assert client.post("/batch", content=invalid, headers={"Content-Type": "application/zip"}).status_code == 400
             assert client.post("/batch", content=payload).status_code == 415
+        with (Path(temp) / "encoder.pt").open("ab") as stream:
+            stream.write(b"corrupted")
+        try:
+            Model.load(temp, device)
+            raise AssertionError("Corrupted weights accepted")
+        except ValueError as error:
+            assert "checksum" in str(error)
 
     all_files = sorted(C.STUDIES.rglob("*.dcm")) + files
     started = perf_counter()
