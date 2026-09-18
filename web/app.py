@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from .previews import build_previews
+from src.solution.segmentation import MAX_REQUEST, SegmentRequest
 
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 256 * 1024 * 1024
@@ -67,7 +68,8 @@ async def upstream_health():
                 or result.get("version") != "1.0"
                 or result.get("backbones") != ["dinov3-large", "medimageinsight"]):
             raise ValueError("Expected Radiance")
-        return {"status": "ok", "model": "Radiance", "busy": app.state.lock.locked()}
+        return {"status": "ok", "model": "Radiance", "busy": app.state.lock.locked(),
+                "segmentation": result.get("segmentation") is True}
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "Сервис модели недоступен. Попробуйте позже.") from None
 
@@ -124,6 +126,43 @@ async def analyze(request: Request):
                 raise HTTPException(504, "Проверка не завершилась за 10 минут. Попробуйте меньший пакет.") from None
             except (httpx.HTTPError, ValueError):
                 raise HTTPException(502, "Потеряно соединение с моделью. Повторите проверку позже.") from None
+
+
+@app.post("/api/segment")
+async def segment(request: Request):
+    if request.headers.get('content-type', '').split(';')[0] != 'application/json':
+        raise HTTPException(415, 'Отправьте превью и область выделения.')
+    if app.state.lock.locked():
+        raise HTTPException(503, 'Модель занята. Повторите выделение чуть позже.')
+    async with app.state.lock:
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > MAX_REQUEST:
+                raise HTTPException(413, 'Превью слишком большое. Загрузите отдельный DICOM.')
+        try:
+            SegmentRequest.model_validate_json(body)
+        except ValueError:
+            raise HTTPException(400, 'Выберите непустую область внутри снимка.') from None
+        try:
+            status = await upstream_health()
+            if not status['segmentation']:
+                raise HTTPException(503, 'Сегментация на сервере пока не подключена. Проверка качества доступна.')
+            response = await app.state.client.post('/segment', content=bytes(body),
+                                                   headers={'Content-Type': 'application/json'})
+            if response.status_code in (400, 413, 415):
+                raise HTTPException(400, 'Не удалось прочитать снимок или рамку. Выберите область заново.')
+            response.raise_for_status()
+            result = response.json()
+            if result.get('model') != 'Radiance Anatomy' or not all(
+                    isinstance(result.get(key), str) and result[key].startswith('data:image/png;base64,')
+                    for key in ('mask', 'overlay')):
+                raise ValueError('Invalid segmentation result')
+            return result
+        except httpx.TimeoutException:
+            raise HTTPException(504, 'Выделение заняло слишком много времени. Повторите позже.') from None
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, 'Не удалось построить маску. Повторите позже; результаты качества сохранены.') from None
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")

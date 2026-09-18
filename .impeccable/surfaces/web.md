@@ -149,3 +149,59 @@ separate verdict in `.impeccable/review/viewer-verdict.md` marks all three fixes
 resolved (`ship`); this covers those fixes only, not a whole-surface or clinical
 approval. Evidence scope and inherited documentation drift are recorded in
 `.impeccable/review/viewer-documentation.md`.
+
+## Anatomy segmentation extension · 2026-09-19
+
+This ordinary extension retains the inspection-sheet world, seed `f62eca4b`
+and delegated code-first authority. DESIGN.md and `.impeccable/design.json`
+remain unchanged. Anatomy tools extend the existing viewer below its display
+adjustments; findings stay in the desktop margin and stack below the viewer
+on mobile, followed by the file list.
+
+- Optional SAM ViT-L segmentation starts from a user-supplied box around one
+  structure. Two clicks select opposite corners; native percentage fields in
+  a disclosure provide a keyboard alternative. Entering selection mode fits
+  the image; completing the box focuses “Построить маску”.
+- The white box outline and translucent cyan mask share the image's zoom and
+  pan. The mask can be hidden, cleared or downloaded as a binary PNG at preview
+  dimensions, which may differ from the original DICOM. Editing the box clears
+  the previous mask. Changing the selected image or starting a new upload
+  clears selection and mask state and cancels a pending request.
+- Tools appear only when the service advertises segmentation support and a
+  real preview is available. Synthetic examples, missing previews and unsupported
+  services do not offer them. While computing, the section exposes a busy state
+  and disables box editing and repeat submission; status text covers progress,
+  invalid boxes, empty masks, request failures and timeouts.
+- Readable experimental-mode copy asks the user to check the mask boundary.
+  The feature neither names anatomy automatically nor localizes quality
+  violations; Radiance results and CSV remain separate. There are no reference
+  segmentation masks in the dataset, so no DXA accuracy, Dice or IoU is claimed.
+- The saved preview and SAM overlay come from real locally processed DICOM.
+  These are user-provided runtime rasters and derived model output, not authored
+  assets or invented scans. The existing prohibition on decorative scan imagery
+  and earlier “no shipping raster” asset description still apply.
+
+Both saved captures were opened during documentation:
+
+| State | Width | Evidence | Observed composition |
+| --- | --- | --- | --- |
+| Real preview with visible SAM mask | 1440px | `.impeccable/review/anatomy-desktop.png` | Viewer, mask and anatomy controls beside findings; file list below. |
+| Same mask and controls | 375px | `.impeccable/review/anatomy-mobile.png` | Viewer and wrapping controls, findings and file list stack within the captured width. |
+
+The supplied run in `artifacts/segmentation-check/browser-check.js` and
+`browser-check.log` completed assertions for mask display, hide/show, PNG
+download, image-change reset, two-point selection, synthetic-example hiding
+and no horizontal overflow at 375px. This documentation pass did not rerun it;
+unsupported-service, loading and error behavior above was inspected in source.
+The desktop capture's focused skip link is a transient state accepted by the
+finish reviewer, not a permanent addition.
+
+`.impeccable/review/anatomy-finish-review.md` records `ship` with no material
+fixes for this extension and attributable regressions. No new whole-surface,
+clinical or deployment approval is implied; the review had no supplied QUALITY
+BAR card. Backend validation and segmentation accuracy are outside this record.
+Inherited system-documentation drift remains recorded in
+`.impeccable/review/viewer-documentation.md`: older results composition, focus
+and return-label descriptions, and missing viewer component entries. A future
+authorized system refresh can include recurring viewer/anatomy patterns;
+this extension does not promote local annotation colors into global tokens.

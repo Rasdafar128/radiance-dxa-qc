@@ -12,6 +12,7 @@
 !src/solution/LICENSE.medimageinsight
 !src/utils/
 !src/utils/prepare_model.py
+!src/utils/prepare_segmentation.py
 !models/
 !models/radiance/
 !models/radiance/*.json
@@ -22,3 +23,5 @@
 !models/radiance/member_*/encoder.pt
 !models/radiance/licenses/
 !models/radiance/licenses/*
+!models/anatomy/
+!models/anatomy/*

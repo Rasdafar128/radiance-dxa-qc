@@ -221,6 +221,8 @@
               </div>
               <div class="viewer-stage" id="viewer-stage" tabindex="0" role="region" aria-label="Снимок DICOM" aria-describedby="viewer-hint">
                 <img id="dicom-image" alt="" draggable="false" hidden />
+                <img id="anatomy-mask" alt="Маска выбранной структуры" draggable="false" hidden />
+                <svg id="anatomy-box" aria-hidden="true" hidden><rect fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" /><circle r="3" fill="#38bdf8" stroke="#fff" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
                 <div class="viewer-empty" id="viewer-empty" role="status">
                   <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14V8h6m20 0h6v6M8 34v6h6m20 0h6v-6M16 24h16m-8-8v16" /></svg>
                   <p id="viewer-message">Загрузите DICOM для просмотра.</p>
@@ -237,6 +239,33 @@
               </div>
               <p class="viewer-hint" id="viewer-hint">Увеличьте снимок и перемещайте его мышью или пальцем. С клавиатуры: + / −, стрелки; 0 — сброс.</p>
               <p class="viewer-disclaimer">Показан полный кадр. Настройки просмотра не меняют результат модели. Локализация нарушений не выполняется.</p>
+              <section class="segmentation" id="segmentation" aria-labelledby="segmentation-title" hidden>
+                <div class="segmentation-heading">
+                  <h3 id="segmentation-title">Выделение анатомии</h3>
+                  <span>Экспериментальный режим</span>
+                </div>
+                <p>Задайте рамку вокруг одной структуры. Модель предложит маску — проверьте её границы по снимку.</p>
+                <button class="button secondary" id="select-anatomy" aria-pressed="false">Задать рамку на снимке</button>
+                <p id="segmentation-status" role="status" aria-live="polite">Выделение не меняет оценку качества и CSV.</p>
+                <details id="box-details">
+                  <summary>Границы рамки, % от размера снимка</summary>
+                  <div class="box-inputs">
+                    <label>Слева<input id="box-left" type="number" min="0" max="100" step="1" value="25" /></label>
+                    <label>Сверху<input id="box-top" type="number" min="0" max="100" step="1" value="10" /></label>
+                    <label>Справа<input id="box-right" type="number" min="0" max="100" step="1" value="75" /></label>
+                    <label>Снизу<input id="box-bottom" type="number" min="0" max="100" step="1" value="90" /></label>
+                  </div>
+                </details>
+                <div class="segmentation-actions">
+                  <button class="button primary" id="segment-anatomy" disabled>Построить маску</button>
+                  <button class="viewer-button" id="clear-anatomy" hidden>Очистить</button>
+                </div>
+                <div class="segmentation-result" id="segmentation-result" hidden>
+                  <label><input type="checkbox" id="show-anatomy" checked /> Показать маску</label>
+                  <button class="text-button" id="download-anatomy">Скачать маску PNG</button>
+                </div>
+                <p class="segmentation-note">Это выделение выбранной структуры, а не места нарушения. Точность на DXA не измерена: эталонных масок в наборе нет. PNG сохраняется в размере превью.</p>
+              </section>
             </section>
             <aside
               class="inspection"

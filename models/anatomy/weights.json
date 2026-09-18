@@ -1,0 +1,13 @@
+{
+  "name": "Radiance Anatomy",
+  "backbone": "SAM ViT-L",
+  "file": "sam-vit-large.pt",
+  "bytes": 1249524607,
+  "sha256": "3adcc4315b642a4d2101128f611684e8734c41232a17c648ed1693702a49a622",
+  "url": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
+  "release_url": "https://github.com/sefixnep/LCT26/releases/download/v1.0.0/sam-vit-large.pt",
+  "source": "https://github.com/facebookresearch/segment-anything",
+  "license": "Apache-2.0",
+  "prompt": "user_box",
+  "fine_tuning": false
+}

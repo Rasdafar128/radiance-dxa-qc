@@ -9,8 +9,8 @@ Torchvision 0.23.0. Версии остальных runtime-зависимост
 
 | Ресурс | Требование / проверка |
 |---|---|
-| RAM | ориентир 8 ГБ для одного процесса; измерения поставки в [DELIVERY](DELIVERY.md) |
-| Диск | веса 2,48 GiB; оставьте 20 ГБ под CPU-сборку, 30 ГБ под CUDA и кэш |
+| RAM | ориентир 8 ГБ для Radiance; с необязательным SAM — 12–16 ГБ с запасом; измерения в [DELIVERY](DELIVERY.md) |
+| Диск | веса Radiance 2,48 GiB, необязательный SAM ещё 1,16 GiB; оставьте 20 ГБ под CPU-сборку, 30 ГБ под CUDA и кэш |
 | CPU | x86_64; по умолчанию 2 вычислительных потока |
 | GPU | необязательна; проверена RTX 3080 20 ГБ, драйвер 580.126.09 |
 | CUDA-вариант | PyTorch cu126; NVIDIA Container Toolkit на хосте |
@@ -35,6 +35,12 @@ CUDA 12.6-вариант рассчитан на проверенную RTX 3080
 |---|---|
 | `dinov3-large-encoder.pt` | `models/radiance/member_0/encoder.pt` |
 | `medimageinsight-encoder.pt` | `models/radiance/member_1/encoder.pt` |
+| `sam-vit-large.pt` — необязательная сегментация | `models/anatomy/sam-vit-large.pt` |
+
+Для выделения анатомии по рамке дополнительно выполните
+`python3 -m src.utils.prepare_segmentation` **до сборки API**. Скрипт скачивает
+те же веса SAM Large напрямую из Meta и проверяет SHA256; GitHub-токен для них
+не нужен. [Подключение и ограничения сегментации](../models/anatomy/README.md).
 
 `radiance-metadata.zip` содержит копию метаданных комплекта; при клонировании
 репозитория распаковывать его не нужно. Лицензии и `SHA256SUMS.txt` также

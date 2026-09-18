@@ -13,6 +13,7 @@ import torch
 from .. import config as C
 from .batch import MAX_UPLOAD, predict_zip
 from .model import Model
+from .segmentation import MAX_REQUEST, WEIGHTS, SegmentRequest, Segmenter
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ async def lifespan(app):
     app.state.model = Model.load(os.getenv("DXA_MODEL", str(C.MODEL)),
                                  os.getenv("DXA_DEVICE", "cpu"))
     app.state.lock = Lock()
+    app.state.segmenter = None
     yield
 
 
@@ -32,7 +34,38 @@ def health():
     model = app.state.model
     return {"status": "ok", "model": model.metadata.get("name", model.metadata["backbone"]),
             "version": model.metadata.get("version"), "recipe": model.metadata["recipe"], "device": str(model.device),
-            "backbones": [m.metadata["backbone"] for m in getattr(model, "members", [model])]}
+            "backbones": [m.metadata["backbone"] for m in getattr(model, "members", [model])],
+            "segmentation": WEIGHTS.is_file()}
+
+
+@app.post("/segment")
+async def segment(request: Request):
+    if request.headers.get('content-type', '').split(';')[0] != 'application/json':
+        raise HTTPException(415, 'Send a PNG preview and box as JSON')
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_REQUEST:
+            raise HTTPException(413, 'Segmentation request exceeds 4 MiB')
+    try:
+        prompt = SegmentRequest.model_validate_json(body)
+        pixels = prompt.pixels()
+    except (ValueError, OSError):
+        raise HTTPException(400, 'Invalid preview or selection box') from None
+    if not WEIGHTS.is_file():
+        raise HTTPException(503, 'SAM Large weights are not installed')
+
+    def process():
+        # Тот же lock ограничивает суммарную нагрузку классификации и сегментации.
+        with app.state.lock:
+            if app.state.segmenter is None:
+                app.state.segmenter = Segmenter(device=str(app.state.model.device))
+            return app.state.segmenter.predict(pixels, prompt.box)
+
+    try:
+        return await run_in_threadpool(process)
+    except Exception:
+        raise HTTPException(503, 'Segmentation is unavailable; quality results are unchanged') from None
 
 
 @app.post("/batch", response_class=Response,

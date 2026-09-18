@@ -14,8 +14,11 @@ COPY LICENSE /app/LICENSE
 COPY src/__init__.py src/config.py /app/src/
 COPY src/solution /app/src/solution
 COPY models/radiance /app/models/radiance
+COPY models/anatomy /app/models/anatomy
 COPY src/utils/prepare_model.py /app/src/utils/prepare_model.py
+COPY src/utils/prepare_segmentation.py /app/src/utils/prepare_segmentation.py
 RUN python -m src.utils.prepare_model --verify-only \
+    && if [ -f /app/models/anatomy/sam-vit-large.pt ]; then python -m src.utils.prepare_segmentation --verify-only; fi \
     && rm -rf /app/src/utils \
     && useradd --uid 10001 --create-home dxa
 USER dxa
