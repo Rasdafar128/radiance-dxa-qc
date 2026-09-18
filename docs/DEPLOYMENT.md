@@ -27,9 +27,19 @@ CUDA 12.6-вариант рассчитан на проверенную RTX 3080
 и `weights.json`. Энкодеры прикреплены к
 [GitHub Release v1.1.0](https://github.com/sefixnep/LCT26/releases/tag/v1.1.0).
 
-Репозиторий приватный. Скачайте оба файла через авторизованный браузер и положите
-`dinov3-large-encoder.pt` как `models/radiance/member_0/encoder.pt`,
-`medimageinsight-encoder.pt` как `models/radiance/member_1/encoder.pt`.
+**Одного клона репозитория или архива Source code (zip) недостаточно:** перед
+сборкой Docker скачайте оба файла из раздела **Assets** указанного релиза.
+Репозиторий приватный, поэтому для браузера нужна учётная запись с доступом.
+
+| Файл в Release → Assets | Путь после скачивания, от корня репозитория |
+|---|---|
+| `dinov3-large-encoder.pt` | `models/radiance/member_0/encoder.pt` |
+| `medimageinsight-encoder.pt` | `models/radiance/member_1/encoder.pt` |
+
+`radiance-metadata.zip` содержит копию метаданных комплекта; при клонировании
+репозитория распаковывать его не нужно. Лицензии и `SHA256SUMS.txt` также
+приложены к релизу; проверка ниже сверяет файлы с хешами в репозитории.
+
 Альтернатива — GitHub CLI с учётной записью, имеющей доступ:
 
 ```bash
