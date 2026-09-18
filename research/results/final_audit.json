@@ -1,0 +1,75 @@
+{
+  "runs": [
+    {
+      "run": "e5-blend",
+      "images": 249,
+      "studies": 100,
+      "recipe_sha256": "7f2fa8a5caa9eae6a0004c3ffaf829bc58a1d01d15ae4d35462ef03d3cc82fab",
+      "oof_sha256": "c85ce5c5ee914b9923f8ec927be02fb91eeaef7e812bf7e209564a4e02efa234",
+      "quality": {
+        "f1": 0.6134969325153374,
+        "roc_auc": 0.8047708725674828
+      },
+      "macro_f1": 0.45999999999999996,
+      "per_type_f1": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.125,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.575,
+        "hip_roi": 0.19047619047619047
+      },
+      "confusion": {
+        "tn": 136,
+        "fp": 41,
+        "fn": 22,
+        "tp": 50
+      },
+      "checks": [
+        "unique pixels and complete study-disjoint outer OOF",
+        "parent recipe, feature, source and manifest hashes",
+        "inner tuning and outer-training head refit reproduced for both parents",
+        "blend members, 0.5/0.5 inner probabilities and inner-only thresholds",
+        "saved outer predictions reproduced from heads",
+        "all published metrics and 2000 study-bootstrap intervals reproduced",
+        "F1, AUC, macro-F1 and confusion independently checked with sklearn"
+      ]
+    },
+    {
+      "run": "e5-blend-split137",
+      "images": 249,
+      "studies": 100,
+      "recipe_sha256": "3f5b0e87c5733c7f50d902a1d2b0f68d4f53e385b0921a50d904c26b47594641",
+      "oof_sha256": "14075ec106edda0d3f92149c485092e1d8057a67df9dabd0d08ce71657e303d3",
+      "quality": {
+        "f1": 0.5771812080536913,
+        "roc_auc": 0.7543157564344005
+      },
+      "macro_f1": 0.4205171299288947,
+      "per_type_f1": {
+        "spine_position": 0.6,
+        "spine_axis": 0.15384615384615385,
+        "spine_objects": 0.7058823529411765,
+        "hip_position": 0.5,
+        "hip_roi": 0.14285714285714285
+      },
+      "confusion": {
+        "tn": 143,
+        "fp": 34,
+        "fn": 29,
+        "tp": 43
+      },
+      "checks": [
+        "unique pixels and complete study-disjoint outer OOF",
+        "parent recipe, feature, source and manifest hashes",
+        "inner tuning and outer-training head refit reproduced for both parents",
+        "blend members, 0.5/0.5 inner probabilities and inner-only thresholds",
+        "saved outer predictions reproduced from heads",
+        "all published metrics and 2000 study-bootstrap intervals reproduced",
+        "F1, AUC, macro-F1 and confusion independently checked with sklearn"
+      ]
+    }
+  ],
+  "independent_test": false,
+  "patient_independence_confirmed": false,
+  "limitation": "Development model selection uses OOF; bootstrap excludes model-selection uncertainty."
+}

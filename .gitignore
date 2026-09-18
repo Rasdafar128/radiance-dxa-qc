@@ -1,7 +1,7 @@
 # данные организаторов: медицинские снимки в публичный репозиторий не кладём,
 # на сервер везём отдельно (context/TEMPLATE.md §8)
 data/
-docs/presentation_template.pptx
+context/organizers/presentation_template.pptx
 docs/_misc/
 
 # веса и всё генерируемое
@@ -14,6 +14,10 @@ submissions/
 *.pth
 *.safetensors
 *.joblib
+*.download
+/input/
+/output/
+/results.csv
 
 # python
 .venv/
@@ -22,3 +26,11 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 .pytest_cache/
+
+# Локальная проверка интерфейса
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/
+.impeccable/config.local.json
+.playwright-cli/
+.env

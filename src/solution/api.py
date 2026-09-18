@@ -18,21 +18,26 @@ from .model import Model
 @asynccontextmanager
 async def lifespan(app):
     torch.set_num_threads(int(os.getenv("DXA_CPU_THREADS", "2")))
-    app.state.model = Model.load(os.getenv("DXA_MODEL", str(C.ARTIFACTS / "e0" / "final")),
+    app.state.model = Model.load(os.getenv("DXA_MODEL", str(C.MODEL)),
                                  os.getenv("DXA_DEVICE", "cpu"))
     app.state.lock = Lock()
     yield
 
 
-app = FastAPI(title="DXA quality control", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="DXA quality control", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "recipe": app.state.model.metadata["recipe"], "device": str(app.state.model.device)}
+    model = app.state.model
+    return {"status": "ok", "recipe": model.metadata["recipe"], "device": str(model.device),
+            "backbones": [m.metadata["backbone"] for m in getattr(model, "members", [model])]}
 
 
-@app.post("/batch", responses={200: {"content": {"text/csv": {}}}})
+@app.post("/batch", response_class=Response,
+          responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}}},
+          openapi_extra={"requestBody": {"required": True, "content": {
+              "application/zip": {"schema": {"type": "string", "format": "binary"}}}}})
 async def batch(request: Request):
     if request.headers.get("content-type", "").split(";")[0] not in ("application/zip", "application/octet-stream"):
         raise HTTPException(415, "Send ZIP bytes with Content-Type: application/zip")

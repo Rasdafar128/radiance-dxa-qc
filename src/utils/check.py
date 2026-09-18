@@ -1,6 +1,6 @@
 """Проверка модели — сохранение, независимость пакета, ошибки DICOM/ZIP и API.
 
-    python -m src.utils.check --model artifacts/e0/final --device cuda
+    python -m src.utils.check --device cuda
 """
 
 import argparse
@@ -35,7 +35,7 @@ def zip_bytes(members):
     return stream.getvalue()
 
 
-def check(path, device):
+def check(path, device, output):
     torch.set_num_threads(2)
     started = perf_counter()
     model = Model.load(path, device)
@@ -117,15 +117,17 @@ def check(path, device):
     result = dict(images=len(full), success=int(full.processing_status.eq("Success").sum()),
                   seconds=elapsed, cold_load_seconds=cold, max_study_seconds=maximum_study,
                   device=device, checks="MONOCHROME1, save/load, order, singleton, duplicate, partial failure, ZIP/API, prostheses")
-    destination = path.parent / f"checks_{device.replace(':', '_')}.json"
+    output.mkdir(parents=True, exist_ok=True)
+    destination = output / f"checks_{device.replace(':', '_')}.json"
     destination.write_text(json.dumps(result, indent=2) + "\n")
-    full.to_csv(path.parent / f"technical_predictions_{device.replace(':', '_')}.csv", index=False)
+    full.to_csv(output / f"technical_predictions_{device.replace(':', '_')}.csv", index=False)
     print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", type=Path, default=C.ARTIFACTS / "e0" / "final")
+    parser.add_argument("--model", type=Path, default=C.MODEL)
+    parser.add_argument("--output", type=Path, default=C.ARTIFACTS / "delivery-checks")
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()
-    check(args.model, args.device)
+    check(args.model, args.device, args.output)

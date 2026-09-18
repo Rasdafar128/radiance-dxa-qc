@@ -48,7 +48,7 @@ def predict_zip(model, source):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
-    parser.add_argument("--model", type=Path, default=C.ARTIFACTS / "e0" / "final")
+    parser.add_argument("--model", type=Path, default=C.MODEL)
     parser.add_argument("--output", type=Path, default=Path("results.csv"))
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()

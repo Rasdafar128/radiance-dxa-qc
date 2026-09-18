@@ -4,7 +4,22 @@ pydicom==3.0.1
 pillow==11.3.0
 fastapi==0.116.1
 uvicorn==0.35.0
-# Транзитивные зависимости проверенной CPU-поставки.
+transformers==4.57.6
+safetensors==0.6.2
+huggingface-hub==0.36.2
+timm==1.0.20
+einops==0.8.1
+PyYAML==6.0.3
+# Транзитивные зависимости проверенной поставки E5.
+certifi==2026.7.22
+charset-normalizer==3.5.1
+hf-xet==1.6.0
+packaging==26.3
+regex==2026.9.10
+requests==2.34.2
+tokenizers==0.22.2
+tqdm==4.70.1
+urllib3==2.8.0
 annotated-types==0.8.0
 anyio==4.15.1
 click==8.5.0

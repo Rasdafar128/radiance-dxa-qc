@@ -1,0 +1,7 @@
+*
+!LICENSE
+!web
+!web/**
+web/.venv
+web/__pycache__
+web/**/*.pyc

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Проверка качества DXA: загрузите DICOM, просмотрите находки и сохраните отчёт."
+    />
+    <title>DXA Контроль — проверка качества исследований</title>
+    <link rel="icon" href="/static/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">К содержимому</a>
+    <header class="header">
+      <a class="brand" href="#check" aria-label="DXA Контроль — на главную"
+        ><img src="/static/mark.svg" width="36" height="36" alt="" /><span
+          >DXA<span class="brand-light">Контроль</span></span
+        ></a
+      >
+      <nav aria-label="Основная навигация">
+        <a
+          href="#check"
+          class="nav-link active"
+          id="nav-check"
+          aria-current="page"
+          >Проверка</a
+        ><a href="#model" class="nav-link" id="nav-model">О модели</a>
+      </nav>
+      <div class="connection" id="connection" role="status">
+        <span class="dot"></span><span id="connection-text">Соединение…</span>
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
+      <section id="check-view" aria-labelledby="page-title">
+        <div class="page-intro">
+          <div>
+            <h1 id="page-title">
+              Качество снимка.<br /><span>Внимание к деталям.</span>
+            </h1>
+            <p>
+              Проверка денситометрии: от DICOM<br class="desktop-break" />
+              до понятного отчёта по каждому снимку.
+            </p>
+          </div>
+          <div class="intro-note">
+            <span class="model-tag">Модель E5</span>
+            <p>Поясничный отдел<br />и проксимальный отдел бедра</p>
+            <span class="note-caption"
+              >Исследовательский прототип · ЛЦТ 2026</span
+            >
+          </div>
+        </div>
+        <div class="workspace" id="upload-workspace">
+          <section class="upload-sheet" aria-labelledby="upload-heading">
+            <div class="sheet-heading">
+              <h2 id="upload-heading">Новое исследование</h2>
+              <span>DICOM / ZIP</span>
+            </div>
+            <div class="drop-zone" id="drop-zone">
+              <svg
+                class="upload-icon"
+                width="60"
+                height="60"
+                viewBox="0 0 60 60"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M17 9h18l10 10v31H17V9Z"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+                <path
+                  d="M35 9v11h10M30 41V27m-6 6 6-6 6 6"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+              </svg>
+              <h3 id="file-heading">Перетащите файл сюда</h3>
+              <p id="file-description">
+                Один DICOM или ZIP с несколькими снимками.<br />До 256 МиБ, без
+                пароля.
+              </p>
+              <input
+                id="file-input"
+                type="file"
+                accept=".dcm,.dicom,.zip,application/dicom,application/zip"
+                hidden
+              />
+              <div class="upload-actions">
+                <button class="button primary" id="choose-file">
+                  Выбрать файл
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14m-6-6 6 6-6 6" />
+                  </svg></button
+                ><button class="button primary" id="analyze" hidden>
+                  Начать проверку
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg></button
+                ><button class="button quiet" id="clear-file" hidden>
+                  Убрать файл
+                </button>
+              </div>
+              <div id="progress" class="progress" role="status" hidden>
+                <span class="spinner" aria-hidden="true"></span
+                ><span id="progress-text">Передаём файл…</span
+                ><small>Не закрывайте эту вкладку</small>
+              </div>
+            </div>
+            <div class="error" id="error" role="alert" hidden></div>
+            <div class="sheet-foot">
+              <span
+                >Файлы обрабатываются временно.<br />История исследований не
+                сохраняется.</span
+              ><button class="text-button" id="show-demo">
+                Посмотреть пример
+                <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 17 17 7M7 7h10v10" />
+                </svg>
+              </button>
+            </div>
+          </section>
+          <aside class="criteria" aria-labelledby="criteria-heading">
+            <h2 id="criteria-heading">Что проверяем</h2>
+            <div class="criterion-group">
+              <h3>Поясничный отдел</h3>
+              <ul>
+                <li>Корректность укладки</li>
+                <li>Выравнивание оси</li>
+                <li>Посторонние предметы</li>
+              </ul>
+            </div>
+            <div class="criterion-group">
+              <h3>Проксимальный отдел бедра</h3>
+              <ul>
+                <li>Корректность укладки</li>
+                <li>Область интереса</li>
+              </ul>
+            </div>
+            <p class="criteria-note">
+              Модель отмечает возможные нарушения качества. Окончательное
+              решение принимает специалист.
+            </p>
+          </aside>
+        </div>
+        <section
+          id="results"
+          class="results"
+          aria-labelledby="results-heading"
+          hidden
+        >
+          <div class="results-top">
+            <div>
+              <h2 id="results-heading" tabindex="-1">Результаты проверки</h2>
+              <p id="result-summary"></p>
+            </div>
+            <div class="result-actions">
+              <button class="button secondary" id="new-upload">
+                Новая проверка</button
+              ><button class="button primary" id="download">
+                Скачать CSV
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <p id="demo-notice" class="demo-notice" hidden>
+            Учебный пример · Все записи вымышлены, это не результаты модели.
+          </p>
+          <div class="results-workspace">
+            <div class="result-list">
+              <div class="list-toolbar">
+                <div
+                  class="filters"
+                  role="group"
+                  aria-label="Фильтр результатов"
+                >
+                  <button data-filter="all" aria-pressed="true">
+                    Все <span id="count-all">0</span></button
+                  ><button data-filter="attention" aria-pressed="false">
+                    Находки <span id="count-attention">0</span></button
+                  ><button data-filter="failure" aria-pressed="false">
+                    Ошибки <span id="count-failure">0</span>
+                  </button>
+                </div>
+                <span class="table-hint">Выберите строку</span>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Файл / область</th>
+                      <th scope="col">Результат</th>
+                      <th scope="col">Оценка¹</th>
+                      <th scope="col">
+                        <span class="sr-only">Подробнее</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="result-rows"></tbody>
+                </table>
+              </div>
+              <p class="empty-filter" id="empty-filter" hidden>
+                В этой категории нет снимков.
+              </p>
+              <p class="table-note">
+                ¹ Оценка нарушения от 0 до 1. Не является вероятностью
+                заболевания.
+              </p>
+            </div>
+            <aside
+              class="inspection"
+              id="inspection"
+              aria-labelledby="inspection-title"
+            ></aside>
+          </div>
+        </section>
+        <div class="bottom-note">
+          <span>Полный кадр. Две модели. Один отчёт.</span
+          ><a href="#model"
+            >Как устроена проверка
+            <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 17 17 7M7 7h10v10" /></svg
+          ></a>
+        </div>
+      </section>
+      <section id="model-view" aria-labelledby="model-title" hidden>
+        <div class="page-intro">
+          <div>
+            <h1 id="model-title">
+              Проверяем качество.<br /><span>Показываем границы.</span>
+            </h1>
+            <p>
+              Две предобученные модели, фиксированные пороги<br
+                class="desktop-break"
+              />
+              и воспроизводимый протокол оценки.
+            </p>
+          </div>
+          <span class="model-tag">E5 · версия 1.0</span>
+        </div>
+        <div class="model-layout">
+          <article class="model-sheet">
+            <h2>Как работает E5</h2>
+            <p>
+              Полный DICOM-кадр дополняется полями с сохранением пропорций.
+              DINOv3 Large и MedImageInsight извлекают признаки; линейные
+              классификаторы определяют область и возможные нарушения.
+            </p>
+            <div class="pipeline">
+              <span>DICOM</span
+              ><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" /></svg
+              ><span>Две модели</span
+              ><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" /></svg
+              ><span>Проверка критериев</span
+              ><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" /></svg
+              ><span>CSV</span>
+            </div>
+            <p>
+              Вероятности усредняются с весами 0,5 / 0,5. Энкодеры заморожены.
+              Входящий пакет не используется для обучения или подстройки
+              порогов.
+            </p>
+            <h2>Измеренное качество</h2>
+            <p>
+              249 размеченных снимков · 100 исследований · 3 внешних фолда.
+              Настройка голов и порогов — только во внутренних групповых
+              разбиениях.
+            </p>
+            <div class="table-scroll">
+              <table class="metrics">
+                <thead>
+                  <tr>
+                    <th>Метрика</th>
+                    <th>Основное разбиение</th>
+                    <th>95% интервал</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>F1 качества</td>
+                    <td>0,613</td>
+                    <td>0,516–0,703</td>
+                  </tr>
+                  <tr>
+                    <td>ROC-AUC качества</td>
+                    <td>0,805</td>
+                    <td>0,740–0,865</td>
+                  </tr>
+                  <tr>
+                    <td>Macro-F1 нарушений</td>
+                    <td>0,460</td>
+                    <td>0,319–0,548</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="model-footnote">
+              Второе разбиение тех же данных: F1 0,577 · ROC-AUC 0,754 ·
+              Macro-F1 0,421.
+            </p>
+            <h2>Как читать результат</h2>
+            <dl class="definitions">
+              <div>
+                <dt>Есть находки</dt>
+                <dd>
+                  Модель отметила один или несколько типов нарушения. Снимок
+                  требует просмотра специалистом.
+                </dd>
+              </div>
+              <div>
+                <dt>Без находок</dt>
+                <dd>
+                  Итоговый ансамбль не отметил нарушений. Это не гарантирует
+                  отсутствие ошибок.
+                </dd>
+              </div>
+              <div>
+                <dt>Не обработан</dt>
+                <dd>
+                  Файл не удалось прочитать или он не поддерживается. Остальные
+                  снимки обрабатываются независимо.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <aside class="model-limits">
+            <h2>Границы оценки</h2>
+            <p>
+              Это разработческие OOF-метрики после выбора рецепта,
+              <strong>не независимый тест</strong>.
+            </p>
+            <p>
+              Интервалы рассчитаны бутстрэпом по исследованиям и не учитывают
+              поиск моделей. Анонимизация не позволяет доказать независимость
+              пациентов.
+            </p>
+            <p>
+              Редкие нарушения нестабильны: 7 положительных снимков для области
+              интереса, 10 — для оси позвоночника. Соответствие сторон бедра
+              требует экспертной проверки.
+            </p>
+            <p>
+              Перенос на другие аппараты и клиническое применение не проверены.
+              Сервис не ставит диагноз и не оценивает плотность кости.
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/sefixnep/LCT26"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Код, протокол и лицензии
+              <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 17 17 7M7 7h10v10" /></svg
+            ></a>
+            <p class="small">Репозиторий доступен участникам с доступом.</p>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">
+      <span>DXA Контроль <span class="footer-sep">/</span> ЛЦТ 2026</span
+      ><span>Инструмент проверки качества, не медицинское заключение</span
+      ><a href="#model">Модель и ограничения</a>
+    </footer>
+  </body>
+</html>

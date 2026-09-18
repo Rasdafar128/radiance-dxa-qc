@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-18T13:27:40.191167+00:00",
+  "title": "Design System: DXA Контроль",
+  "extensions": {
+    "colorMeta": {
+      "blue": {
+        "role": "primary",
+        "displayName": "Cobalt action",
+        "tonalRamp": [
+          "oklch(15.00% 0.14660 262.78)",
+          "oklch(26.43% 0.14660 262.78)",
+          "oklch(37.86% 0.14660 262.78)",
+          "oklch(49.29% 0.14660 262.78)",
+          "oklch(60.71% 0.14660 262.78)",
+          "oklch(72.14% 0.14660 262.78)",
+          "oklch(83.57% 0.14660 262.78)",
+          "oklch(95.00% 0.14660 262.78)"
+        ]
+      },
+      "blue-soft": {
+        "role": "primary",
+        "displayName": "Pale cobalt selection",
+        "tonalRamp": [
+          "oklch(15.00% 0.01444 264.50)",
+          "oklch(26.43% 0.01444 264.50)",
+          "oklch(37.86% 0.01444 264.50)",
+          "oklch(49.29% 0.01444 264.50)",
+          "oklch(60.71% 0.01444 264.50)",
+          "oklch(72.14% 0.01444 264.50)",
+          "oklch(83.57% 0.01444 264.50)",
+          "oklch(95.00% 0.01444 264.50)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Mineral ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.00455 258.32)",
+          "oklch(26.43% 0.00455 258.32)",
+          "oklch(37.86% 0.00455 258.32)",
+          "oklch(49.29% 0.00455 258.32)",
+          "oklch(60.71% 0.00455 258.32)",
+          "oklch(72.14% 0.00455 258.32)",
+          "oklch(83.57% 0.00455 258.32)",
+          "oklch(95.00% 0.00455 258.32)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Blue ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.05654 259.94)",
+          "oklch(26.43% 0.05654 259.94)",
+          "oklch(37.86% 0.05654 259.94)",
+          "oklch(49.29% 0.05654 259.94)",
+          "oklch(60.71% 0.05654 259.94)",
+          "oklch(72.14% 0.05654 259.94)",
+          "oklch(83.57% 0.05654 259.94)",
+          "oklch(95.00% 0.05654 259.94)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate text",
+        "tonalRamp": [
+          "oklch(15.00% 0.03762 258.36)",
+          "oklch(26.43% 0.03762 258.36)",
+          "oklch(37.86% 0.03762 258.36)",
+          "oklch(49.29% 0.03762 258.36)",
+          "oklch(60.71% 0.03762 258.36)",
+          "oklch(72.14% 0.03762 258.36)",
+          "oklch(83.57% 0.03762 258.36)",
+          "oklch(95.00% 0.03762 258.36)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Fine rule",
+        "tonalRamp": [
+          "oklch(15.00% 0.01390 258.35)",
+          "oklch(26.43% 0.01390 258.35)",
+          "oklch(37.86% 0.01390 258.35)",
+          "oklch(49.29% 0.01390 258.35)",
+          "oklch(60.71% 0.01390 258.35)",
+          "oklch(72.14% 0.01390 258.35)",
+          "oklch(83.57% 0.01390 258.35)",
+          "oklch(95.00% 0.01390 258.35)"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Green unflagged",
+        "tonalRamp": [
+          "oklch(15.00% 0.08237 164.07)",
+          "oklch(26.43% 0.08237 164.07)",
+          "oklch(37.86% 0.08237 164.07)",
+          "oklch(49.29% 0.08237 164.07)",
+          "oklch(60.71% 0.08237 164.07)",
+          "oklch(72.14% 0.08237 164.07)",
+          "oklch(83.57% 0.08237 164.07)",
+          "oklch(95.00% 0.08237 164.07)"
+        ]
+      },
+      "ok-bg": {
+        "role": "status",
+        "displayName": "Green status ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.01322 159.91)",
+          "oklch(26.43% 0.01322 159.91)",
+          "oklch(37.86% 0.01322 159.91)",
+          "oklch(49.29% 0.01322 159.91)",
+          "oklch(60.71% 0.01322 159.91)",
+          "oklch(72.14% 0.01322 159.91)",
+          "oklch(83.57% 0.01322 159.91)",
+          "oklch(95.00% 0.01322 159.91)"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Amber finding",
+        "tonalRamp": [
+          "oklch(15.00% 0.10500 67.78)",
+          "oklch(26.43% 0.10500 67.78)",
+          "oklch(37.86% 0.10500 67.78)",
+          "oklch(49.29% 0.10500 67.78)",
+          "oklch(60.71% 0.10500 67.78)",
+          "oklch(72.14% 0.10500 67.78)",
+          "oklch(83.57% 0.10500 67.78)",
+          "oklch(95.00% 0.10500 67.78)"
+        ]
+      },
+      "warn-bg": {
+        "role": "status",
+        "displayName": "Amber status ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.02966 85.56)",
+          "oklch(26.43% 0.02966 85.56)",
+          "oklch(37.86% 0.02966 85.56)",
+          "oklch(49.29% 0.02966 85.56)",
+          "oklch(60.71% 0.02966 85.56)",
+          "oklch(72.14% 0.02966 85.56)",
+          "oklch(83.57% 0.02966 85.56)",
+          "oklch(95.00% 0.02966 85.56)"
+        ]
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Red file failure",
+        "tonalRamp": [
+          "oklch(15.00% 0.13523 23.27)",
+          "oklch(26.43% 0.13523 23.27)",
+          "oklch(37.86% 0.13523 23.27)",
+          "oklch(49.29% 0.13523 23.27)",
+          "oklch(60.71% 0.13523 23.27)",
+          "oklch(72.14% 0.13523 23.27)",
+          "oklch(83.57% 0.13523 23.27)",
+          "oklch(95.00% 0.13523 23.27)"
+        ]
+      },
+      "error-bg": {
+        "role": "status",
+        "displayName": "Red error ground",
+        "tonalRamp": [
+          "oklch(15.00% 0.01632 22.08)",
+          "oklch(26.43% 0.01632 22.08)",
+          "oklch(37.86% 0.01632 22.08)",
+          "oklch(49.29% 0.01632 22.08)",
+          "oklch(60.71% 0.01632 22.08)",
+          "oklch(72.14% 0.01632 22.08)",
+          "oklch(83.57% 0.01632 22.08)",
+          "oklch(95.00% 0.01632 22.08)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page heading",
+        "purpose": "Two-tone page headings; responsive sizes are documented in DESIGN.md."
+      },
+      "label": {
+        "displayName": "Legible detail",
+        "purpose": "Visible metadata, status labels and tables; 12px minimum."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "results-arrive",
+        "value": "0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Single results reveal, 6px vertical shift and shallow clip; disabled for reduced motion."
+      },
+      {
+        "name": "button-transition",
+        "value": "0.15s",
+        "purpose": "Background and color feedback; disabled for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1600px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "stacked",
+        "value": "800px"
+      },
+      {
+        "name": "mobile",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main upload, analysis or export action.",
+      "html": "<button class=\"ds-primary\">Начать проверку</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border:1px solid transparent;border-radius:6px;font:500 13px/1.4 Golos,system-ui,sans-serif;cursor:pointer;transition:background .15s,color .15s;background:var(--blue);color:var(--paper)}.ds-primary:hover:not(:disabled){background:#1d4089}.ds-primary:focus-visible{outline:3px solid #517cce;outline-offset:4px}.ds-primary:active:not(:disabled){transform:translateY(1px)}.ds-primary:disabled{opacity:.65;cursor:wait}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A subordinate action beside the primary control.",
+      "html": "<button class=\"ds-secondary\">Новая проверка</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border:1px solid transparent;border-radius:6px;font:500 13px/1.4 Golos,system-ui,sans-serif;cursor:pointer;transition:background .15s,color .15s;background:var(--paper);border-color:#bdc8da;color:var(--ink)}.ds-secondary:hover{background:#f0f3f8}.ds-secondary:focus-visible{outline:3px solid #517cce;outline-offset:4px}.ds-secondary:active{transform:translateY(1px)}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Hash navigation uses a cobalt underline and aria-current.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Основная навигация\"><a href=\"#check\" aria-current=\"page\">Проверка</a><a href=\"#model\">О модели</a></nav>",
+      "css": ".ds-nav{display:flex;gap:32px;min-height:49px;font:400 14px/1.55 Golos,system-ui,sans-serif}.ds-nav a{display:flex;align-items:center;padding:0 2px;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent}.ds-nav a:hover{color:var(--blue)}.ds-nav a[aria-current=\"page\"]{color:var(--blue);border-color:var(--blue)}.ds-nav a:focus-visible{outline:3px solid #517cce;outline-offset:4px}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Pressed result filter",
+      "kind": "button",
+      "refersTo": "filter-selected",
+      "description": "Text and aria-pressed expose the current results category.",
+      "html": "<button class=\"ds-filter\" aria-pressed=\"true\">Находки <span>2</span></button>",
+      "css": ".ds-filter{min-height:42px;border:0;border-radius:5px;padding:8px 10px;font:400 12px/1.55 Golos,system-ui,sans-serif;color:var(--blue);background:var(--blue-soft);cursor:pointer}.ds-filter span{margin-left:5px;font-variant-numeric:tabular-nums}.ds-filter:hover{background:#f0f3f8}.ds-filter:focus-visible{outline:3px solid #517cce;outline-offset:4px}.ds-filter:active{transform:translateY(1px)}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Finding status",
+      "kind": "chip",
+      "refersTo": "status-finding",
+      "description": "A noninteractive model-finding label, never a diagnosis.",
+      "html": "<span class=\"ds-status\">Есть находки</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border-radius:4px;padding:5px 8px;font:400 12px/1.55 Golos,system-ui,sans-serif;color:var(--warn);background:var(--warn-bg)}.ds-status:before{content:\"\";width:4px;height:4px;border-radius:50%;background:currentColor}"
+    },
+    {
+      "name": "Working sheet",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "Flat working surface with a ruled heading, without shadows.",
+      "html": "<section class=\"ds-sheet\"><h2>Новое исследование</h2><p>Один DICOM или ZIP с несколькими снимками.</p></section>",
+      "css": ".ds-sheet{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font:400 15px/1.55 Golos,system-ui,sans-serif}.ds-sheet h2{margin:0 28px;padding:24px 0;border-bottom:1px solid var(--line);font-size:17px;font-weight:550;line-height:1.3;letter-spacing:-.02em}.ds-sheet p{margin:20px 28px 24px;color:var(--muted);font-size:13px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quality Inspection Sheet",
+    "overview": "Cool mineral ground, white working sheets and deep blue ink make a restrained, normally lit workspace. Cobalt marks actions and selection; ruled rows and open explanatory margins carry the information. This records the implemented world in `web/static/`, rather than a separate visual comp.",
+    "keyCharacteristics": [
+      "Clear Russian labels and a single locally hosted Cyrillic type family.",
+      "Flat sheets, fine rules, restrained rectangular controls and generous margins.",
+      "Textual findings and failure states, with color as supporting information.",
+      "Authored SVG marks and icons; no decorative medical imagery or shipping raster."
+    ],
+    "rules": [
+      {
+        "name": "The Text Before Color Rule",
+        "body": "Pair every operational status with readable text; a dot, tint or icon cannot carry the meaning alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Legible Detail Rule",
+        "body": "Visible labels, metadata, tables and explanatory copy stay at least 12px. Scores use tabular numerals and Russian decimal formatting.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** reuse the locally bundled family, status meanings and fine ruled surfaces.",
+      "**Do** keep mobile selection and return paths explicit, with keyboard focus preserved.",
+      "**Do** retain source-file identity and original CSV content when changing display order."
+    ],
+    "donts": [
+      "**Don't** replace readable states with color-only badges or character-glyph icons.",
+      "**Don't** present a clean result as a medical conclusion or synthetic rows as real output.",
+      "**Don't** infer a broader visual approval from the scoped finish verdict; review evidence and current surface status are recorded in `.impeccable/surfaces/web.md`."
+    ]
+  }
+}
