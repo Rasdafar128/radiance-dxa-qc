@@ -2,6 +2,7 @@
 const $ = (id) => document.getElementById(id);
 let file = null,
   rows = [],
+  previews = [],
   csv = "",
   selected = 0,
   filter = "all",
@@ -233,6 +234,7 @@ $("analyze").addEventListener("click", async () => {
     )
       throw new Error("Ответ модели неполный. Повторите проверку.");
     rows = result.rows;
+    previews = Array.isArray(result.previews) ? result.previews : [];
     csv = result.csv;
     demo = false;
     showResults();
@@ -244,6 +246,7 @@ $("analyze").addEventListener("click", async () => {
   }
 });
 function showResults() {
+  $("check-view").classList.add("has-results");
   filter = "all";
   selected = rows.findIndex(attention);
   if (selected < 0) selected = 0;
@@ -262,14 +265,8 @@ function showResults() {
 function openResult(index) {
   selected = index;
   render();
-  if (matchMedia("(max-width: 800px)").matches) {
-    $("inspection-title").focus({ preventScroll: true });
-    $("inspection").scrollIntoView({ block: "start" });
-  } else {
-    $("result-row-" + index)
-      .querySelector("button")
-      .focus({ preventScroll: true });
-  }
+  $("viewer-title").focus({ preventScroll: true });
+  $("viewer").scrollIntoView({ block: "start" });
 }
 function icon(pathData, viewBox = "0 0 24 24") {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -281,6 +278,140 @@ function icon(pathData, viewBox = "0 0 24 24") {
   svg.append(path);
   return svg;
 }
+const view = { zoom: 1, x: 0, y: 0, index: -1, source: "", visible: [] };
+const stage = $("viewer-stage");
+const scan = $("dicom-image");
+let dragging = null;
+function applyView() {
+  const active = !scan.hidden;
+  const width = scan.naturalWidth || stage.clientWidth;
+  const height = scan.naturalHeight || stage.clientHeight;
+  const fit = Math.min(stage.clientWidth / width, stage.clientHeight / height);
+  const maxX = Math.max(0, (width * fit * view.zoom - stage.clientWidth) / 2);
+  const maxY = Math.max(0, (height * fit * view.zoom - stage.clientHeight) / 2);
+  view.x = Math.max(-maxX, Math.min(maxX, view.x));
+  view.y = Math.max(-maxY, Math.min(maxY, view.y));
+  scan.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+  scan.style.filter = `brightness(${$("image-brightness").value}%) contrast(${$("image-contrast").value}%)`;
+  $("zoom-value").textContent = view.zoom.toLocaleString("ru-RU", { minimumFractionDigits: 1 }) + "×";
+  $("brightness-value").textContent = $("image-brightness").value + "%";
+  $("contrast-value").textContent = $("image-contrast").value + "%";
+  $("zoom-out").disabled = !active || view.zoom <= 1;
+  $("zoom-in").disabled = !active || view.zoom >= 4;
+  for (const id of ["fit-image", "reset-image", "image-brightness", "image-contrast"])
+    $(id).disabled = !active;
+  stage.classList.toggle("is-zoomed", active && view.zoom > 1);
+}
+function resetView() {
+  view.zoom = 1;
+  view.x = view.y = 0;
+  $("image-brightness").value = $("image-contrast").value = "100";
+  applyView();
+}
+function zoomBy(delta) {
+  if (scan.hidden) return;
+  view.zoom = Math.max(1, Math.min(4, view.zoom + delta));
+  applyView();
+}
+function renderViewer(visible) {
+  view.visible = visible.map(({ index }) => index);
+  const position = view.visible.indexOf(selected);
+  $("image-position").textContent = position < 0 ? "0 / 0" : `${position + 1} / ${visible.length}`;
+  $("previous-image").disabled = position <= 0;
+  $("next-image").disabled = position < 0 || position === visible.length - 1;
+  const row = rows[selected];
+  const preview = previews[selected];
+  const source = !demo && preview?.image?.startsWith("data:image/png;base64,") ? preview.image : "";
+  $("viewer-title").textContent = row ? basename(row.path_to_study) : "Нет выбранного снимка";
+  $("viewer-caption").textContent = row
+    ? `${regionLabel(row)}${source ? ` · ${preview.width} × ${preview.height} px${preview.reduced ? " · уменьшенное превью" : ""}` : ""}`
+    : "Выберите другую категорию в списке файлов.";
+  scan.hidden = !source;
+  $("viewer").classList.toggle("is-empty", !source);
+  $("viewer-empty").hidden = Boolean(source);
+  $("viewer-message").textContent = !row ? "В этой категории нет снимков."
+    : demo ? "В учебном примере нет DICOM. Загрузите свой файл, чтобы рассмотреть снимок."
+    : preview?.message || "Превью недоступно. Результат проверки и CSV сохранены.";
+  if (view.index !== selected || view.source !== source) {
+    view.index = selected;
+    view.source = source;
+    if (source) {
+      scan.src = source;
+      scan.alt = `Полный кадр DICOM: ${basename(row.path_to_study)}. ${regionLabel(row)}.`;
+    } else scan.removeAttribute("src");
+    resetView();
+  }
+  applyView();
+}
+function moveImage(delta) {
+  const next = view.visible[view.visible.indexOf(selected) + delta];
+  if (next === undefined) return;
+  selected = next;
+  render();
+}
+$("previous-image").addEventListener("click", () => moveImage(-1));
+$("next-image").addEventListener("click", () => moveImage(1));
+$("zoom-in").addEventListener("click", () => zoomBy(0.5));
+$("zoom-out").addEventListener("click", () => zoomBy(-0.5));
+$("fit-image").addEventListener("click", () => {
+  view.zoom = 1;
+  view.x = view.y = 0;
+  applyView();
+});
+$("reset-image").addEventListener("click", resetView);
+for (const id of ["image-brightness", "image-contrast"])
+  $(id).addEventListener("input", applyView);
+stage.addEventListener("keydown", (event) => {
+  if (scan.hidden) return;
+  if (["+", "="].includes(event.key)) zoomBy(0.5);
+  else if (event.key === "-") zoomBy(-0.5);
+  else if (event.key === "0") resetView();
+  else if (event.key.startsWith("Arrow") && view.zoom > 1) {
+    if (event.key === "ArrowLeft") view.x += 30;
+    if (event.key === "ArrowRight") view.x -= 30;
+    if (event.key === "ArrowUp") view.y += 30;
+    if (event.key === "ArrowDown") view.y -= 30;
+    applyView();
+  } else return;
+  event.preventDefault();
+});
+stage.addEventListener("pointerdown", (event) => {
+  if (scan.hidden || view.zoom <= 1 || event.button !== 0 || !event.isPrimary) return;
+  dragging = { id: event.pointerId, x: event.clientX - view.x, y: event.clientY - view.y };
+  stage.setPointerCapture(event.pointerId);
+});
+stage.addEventListener("pointermove", (event) => {
+  if (dragging?.id !== event.pointerId) return;
+  view.x = event.clientX - dragging.x;
+  view.y = event.clientY - dragging.y;
+  applyView();
+});
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
+  stage.addEventListener(type, () => { dragging = null; });
+const fullscreen = $("fullscreen-image");
+fullscreen.hidden = !document.fullscreenEnabled;
+fullscreen.addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await $("viewer").requestFullscreen();
+  } catch {
+    fullscreen.hidden = true;
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  fullscreen.setAttribute("aria-label", document.fullscreenElement ? "Выйти из полного экрана" : "Открыть просмотр на весь экран");
+  fullscreen.title = document.fullscreenElement ? "Выйти из полного экрана" : "На весь экран";
+  applyView();
+});
+new ResizeObserver(applyView).observe(stage);
+scan.addEventListener("load", applyView);
+scan.addEventListener("error", () => {
+  scan.hidden = true;
+  $("viewer").classList.add("is-empty");
+  $("viewer-empty").hidden = false;
+  $("viewer-message").textContent = "Не удалось показать снимок. Повторите загрузку DICOM.";
+  applyView();
+});
 function render() {
   for (const button of document.querySelectorAll("[data-filter]"))
     button.setAttribute(
@@ -343,6 +474,7 @@ function render() {
     body.append(tr);
   }
   $("empty-filter").hidden = visible.length > 0;
+  renderViewer(visible);
   renderInspection();
 }
 function renderInspection() {
@@ -351,7 +483,7 @@ function renderInspection() {
   const row = rows[selected];
   const title = element(
     "h2",
-    row ? basename(row.path_to_study) : "Нет выбранного снимка",
+    row ? "Результат модели" : "Нет выбранного снимка",
   );
   title.id = "inspection-title";
   title.tabIndex = -1;
@@ -368,7 +500,7 @@ function renderInspection() {
   }
   const back = element(
     "button",
-    "К выбранному файлу",
+    "К списку файлов",
     "text-button back-to-row",
   );
   back.addEventListener("click", () => {
@@ -436,7 +568,12 @@ for (const button of document.querySelectorAll("[data-filter]"))
     render();
   });
 $("new-upload").addEventListener("click", () => {
+  $("check-view").classList.remove("has-results");
   rows = [];
+  previews = [];
+  view.index = -1;
+  view.source = "";
+  $("dicom-image").removeAttribute("src");
   csv = "";
   demo = false;
   $("results").hidden = true;
@@ -455,6 +592,7 @@ $("download").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 $("show-demo").addEventListener("click", () => {
+  previews = [];
   const base = {
     study_uid: "SYNTHETIC-STUDY",
     image_uid: "SYNTHETIC-IMAGE",

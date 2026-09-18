@@ -14,6 +14,9 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
+
+from .previews import build_previews
 
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 256 * 1024 * 1024
@@ -39,7 +42,7 @@ async def response_headers(request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; "
-        "img-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+        "img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"
     )
     return response
 
@@ -115,7 +118,8 @@ async def analyze(request: Request):
                 rows = list(csv.DictReader(io.StringIO(response.text)))
                 if not rows or any("processing_status" not in row for row in rows):
                     raise ValueError("Invalid CSV")
-                return {"rows": rows, "csv": response.text, "model": "Radiance"}
+                previews = await run_in_threadpool(build_previews, source, rows)
+                return {"rows": rows, "csv": response.text, "model": "Radiance", "previews": previews}
             except httpx.TimeoutException:
                 raise HTTPException(504, "Проверка не завершилась за 10 минут. Попробуйте меньший пакет.") from None
             except (httpx.HTTPError, ValueError):

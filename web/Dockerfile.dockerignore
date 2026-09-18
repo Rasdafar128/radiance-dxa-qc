@@ -2,6 +2,12 @@
 !LICENSE
 !web
 !web/**
+!src
+!src/__init__.py
+!src/config.py
+!src/solution
+!src/solution/__init__.py
+!src/solution/dicom.py
 web/.venv
 web/__pycache__
 web/**/*.pyc

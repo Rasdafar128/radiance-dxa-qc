@@ -1,6 +1,9 @@
 fastapi==0.116.1
 uvicorn==0.35.0
 httpx==0.28.1
+numpy==2.2.6
+pydicom==3.0.1
+pillow==11.3.0
 annotated-types==0.8.0
 anyio==4.15.1
 certifi==2026.7.22

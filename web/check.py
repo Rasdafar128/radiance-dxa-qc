@@ -1,19 +1,69 @@
 """Проверка границы веб-шлюза без GPU: python -m web.check."""
 
 import io
+import base64
 import unittest
 from unittest.mock import patch
 import zipfile
 
 from fastapi.testclient import TestClient
 import httpx
+import numpy as np
+from PIL import Image
+from pydicom.dataset import FileDataset, FileMetaDataset
+from pydicom.uid import ExplicitVRLittleEndian
 
 from .app import app
+from .previews import build_previews
 
 
 CSV = ("path_to_study,study_uid,image_uid,anatomical_region,quality_class,quality_prob,"
        "violation_type,processing_status,time_of_processing\n"
        '"<script>.dcm",1,2,region,0,0.1,,Success,0.3\n')
+
+
+def dicom_bytes(inverse=False):
+    ds = FileDataset(None, {}, file_meta=FileMetaDataset(), preamble=b"\0" * 128)
+    ds.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds.Rows, ds.Columns = 4, 4
+    ds.SamplesPerPixel, ds.BitsAllocated, ds.BitsStored, ds.HighBit = 1, 8, 8, 7
+    ds.PixelRepresentation = 0
+    ds.PhotometricInterpretation = "MONOCHROME1" if inverse else "MONOCHROME2"
+    ds.PixelData = bytes(range(0, 256, 16))
+    output = io.BytesIO()
+    ds.save_as(output)
+    return output.getvalue()
+
+
+class PreviewCheck(unittest.TestCase):
+    def test_duplicate_names_keep_distinct_pixels_and_monochrome1(self):
+        source = io.BytesIO()
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("a/scan.dcm", dicom_bytes())
+            with self.assertWarns(UserWarning):
+                archive.writestr("a/scan.dcm", dicom_bytes(inverse=True))
+            archive.writestr("broken.dcm", b"broken")
+        rows = [{"path_to_study": p, "processing_status": "Success"}
+                for p in ("a/scan.dcm", "a/scan.dcm", "broken.dcm")]
+        previews = build_previews(source, rows)
+        decoded = [np.array(Image.open(io.BytesIO(base64.b64decode(p["image"].split(",")[1]))))
+                   for p in previews[:2]]
+        np.testing.assert_array_equal(decoded[0], np.arange(0, 256, 16).reshape(4, 4))
+        np.testing.assert_array_equal(decoded[1], 255 - decoded[0])
+        self.assertNotIn("image", previews[2])
+        self.assertEqual(previews[0]["width"], 4)
+        self.assertFalse(previews[0]["reduced"])
+        rows[0]["path_to_study"] = "wrong-file.dcm"
+        self.assertTrue(all("image" not in p for p in build_previews(source, rows)))
+
+    def test_preview_limits_do_not_remove_results(self):
+        source = io.BytesIO()
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("scan.dcm", dicom_bytes())
+        rows = [{"path_to_study": "scan.dcm", "processing_status": "Success"}]
+        with patch("web.previews.MAX_PREVIEWS", 1):
+            self.assertEqual(len(build_previews(source, rows)), 1)
+            self.assertIn("Лимит", build_previews(source, rows)[0]["message"])
 
 
 class GatewayCheck(unittest.TestCase):
@@ -49,6 +99,14 @@ class GatewayCheck(unittest.TestCase):
             self.assertEqual(archive.namelist(), ["image.dcm"])
             self.assertEqual(archive.read("image.dcm"), b"dicom")
         self.assertFalse(app.state.lock.locked())
+
+    def test_real_preview_and_csv_are_returned_together(self):
+        response = self.client.post("/api/analyze?filename=%3Cscript%3E.dcm", content=dicom_bytes(),
+                                    headers={"Content-Type": "application/dicom"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["csv"], CSV)
+        self.assertTrue(response.json()["previews"][0]["image"].startswith("data:image/png;base64,"))
+        self.assertEqual(response.json()["previews"][0]["height"], 4)
 
     def test_limits_and_empty_input(self):
         headers = {"Content-Type": "application/zip"}

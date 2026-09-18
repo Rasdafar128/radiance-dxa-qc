@@ -38,6 +38,9 @@ working website, containers, documentation, model release and research audit.
 
 - Input: supported single-frame monochrome DICOM, individually or in ZIP.
 - Output: one result per file, including duplicates and failures; CSV download.
+- Inspect the uploaded full-frame DICOM beside findings, with zoom, pan,
+  brightness, contrast and fullscreen. Display adjustments never change inference.
+- No violation masks, coordinates or heatmaps; synthetic examples contain no DICOM.
 - No accounts or persistent study archive in this version.
 - Files are processed temporarily; no browser-to-GPU credentials.
 - The model reports image acquisition quality, not patient health.
