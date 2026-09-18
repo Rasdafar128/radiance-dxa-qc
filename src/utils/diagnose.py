@@ -22,6 +22,7 @@ def diagnose(path):
         x = stored["features"]
     truth = targets(df)
     models = [json.loads((path / f"fold_{fold}/model.json").read_text()) for fold in range(3)]
+    adapted = models[0].get("recipe", "").startswith("dinov3-last2-bf16-")
     report = dict(run=str(path), targets={}, quality_gates=[
         {k: m["heads"][k]["threshold"] for k in ("spine_quality", "hip_quality")}
         if m.get("quality_gate", False) else None for m in models])
@@ -31,9 +32,11 @@ def diagnose(path):
         for fold in range(3):
             head = models[fold]["heads"][key]
             train = (df.fold != fold) & np.isfinite(truth[key])
-            folds.append(dict(fold=fold, threshold=head["threshold"], C=head["C"], balanced=head["balanced"],
+            # Adapted OOF features come from different encoders; never reuse them as train features.
+            mean_train = float(probability(x[train], head).mean()) if "coef" in head and not adapted else None
+            folds.append(dict(fold=fold, threshold=head["threshold"], C=head.get("C"), balanced=head.get("balanced"),
                               train_prevalence=float(np.mean(truth[key][train])),
-                              mean_train_probability=float(probability(x[train], head).mean())))
+                              mean_train_probability=mean_train))
         report["targets"][key] = dict(positives=int((y == 1).sum()),
                                        tp=int(((y == 1) & pred).sum()), fp=int(((y == 0) & pred).sum()),
                                        fn=int(((y == 1) & ~pred).sum()), folds=folds)

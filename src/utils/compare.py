@@ -61,6 +61,8 @@ if __name__ == "__main__":
     parser.add_argument("baseline", type=Path)
     parser.add_argument("candidate", type=Path)
     args = parser.parse_args()
+    if any((p / "invalid.json").exists() for p in (args.baseline, args.candidate)):
+        raise ValueError("Cannot compare an invalidated experiment")
     baseline, candidate = [pd.read_csv(p / "oof.csv") for p in (args.baseline, args.candidate)]
     # Равные прогнозы при обратном порядке должны давать нулевую разность.
     same = paired(baseline, baseline.iloc[::-1], resamples=10)

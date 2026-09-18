@@ -53,7 +53,11 @@ def thresholds(df, scores):
 
 def run(first, second, output, resamples):
     parents = [first, second]
+    if any((p / "invalid.json").exists() for p in parents):
+        raise ValueError("Cannot blend an invalidated experiment")
     df = pd.read_csv(first / "manifest.csv")
+    repeats = [json.loads((p / "recipe.json").read_text()).get("inner_repeats", 1) for p in parents]
+    assert repeats[0] == repeats[1]
     assert (first / "manifest.csv").read_bytes() == (second / "manifest.csv").read_bytes()
     assert not df.image_id.duplicated().any() and not df.pixel_sha256.duplicated().any()
     assert df.groupby("study").fold.nunique().eq(1).all()
@@ -64,7 +68,7 @@ def run(first, second, output, resamples):
         assert set(inner.study) == set(train.study) and not inner.study.duplicated().any()
     code = [C.ROOT / "src" / p for p in ("config.py", "solution/model.py", "solution/dicom.py",
             "solution/medimage_davit.py", "utils/train_blend.py", "utils/train.py", "utils/evaluate.py")]
-    recipe = dict(id="frozen-probability-mean-v1", members=[str(p) for p in parents],
+    recipe = dict(id="frozen-probability-mean-v1", members=[str(p) for p in parents], inner_repeats=repeats[0],
                   weights=[.5, .5], quality_gate=True, resamples=resamples,
                   parents=[dict(recipe_sha256=digest(p / "recipe.json"), features_sha256=digest(p / "features.npz")) for p in parents],
                   manifest_sha256=digest(first / "manifest.csv"),
@@ -93,7 +97,16 @@ def run(first, second, output, resamples):
         inner = [pd.read_csv(p / inner_file).set_index("image_id").reindex(train.image_id) for p in parents]
         assert all(set(v.index) == set(train.image_id) and not v.isna().all(axis=1).any() for v in inner)
         scores = (inner[0] + inner[1]) / 2
-        heads = thresholds(train, scores)
+        repeated_scores = None
+        if repeats[0] > 1:
+            filename = "final_repeated_inner_predictions.csv" if name == "final" else f"fold_{name}/repeated_inner_predictions.csv"
+            index = pd.MultiIndex.from_product([range(repeats[0]), train.image_id], names=["repeat", "image_id"])
+            repeated = [pd.read_csv(p / filename).set_index(["repeat", "image_id"]).reindex(index) for p in parents]
+            assert all(v.index.is_unique and len(v) == len(train) * repeats[0] for v in repeated)
+            repeated_scores = (repeated[0] + repeated[1]) / 2
+            heads = thresholds(pd.concat([train] * repeats[0], ignore_index=True), repeated_scores)
+        else:
+            heads = thresholds(train, scores)
         folder = "final" if name == "final" else f"fold_{name}"
         sources = [p / folder for p in parents]
         members = [cached_model(p) for p in sources]
@@ -111,7 +124,13 @@ def run(first, second, output, resamples):
         write_json(destination / "model.json", dict(model.metadata, heads=heads))
         write_json(destination / "selection.json", dict(parameters=heads, selection="averaged_inner_oof"))
         scores.to_csv(destination / "inner_predictions.csv", index_label="image_id")
+        if repeated_scores is not None:
+            repeated_scores.to_csv(destination / "repeated_inner_predictions.csv")
         shutil.copyfile(first / f"inner_{name}.csv", output / f"inner_{name}.csv")
+        for r in range(1, repeats[0]):
+            filename = f"inner_{name}_repeat{r}.csv"
+            assert (first / filename).read_bytes() == (second / filename).read_bytes()
+            shutil.copyfile(first / filename, output / filename)
         if name != "final":
             valid = df.fold == name
             predictions(model, df[valid], x[valid]).to_csv(destination / "oof.csv", index=False)

@@ -54,14 +54,17 @@ def inner_folds(df, folds=2, seed=42, attempts=1000):
     return pd.DataFrame({"study": groups.index, "fold": best[1]})
 
 
-def tune(df, x, split, solver="liblinear", quality_gate=False):
-    assignments = df.study.map(split.set_index("study").fold).to_numpy()
+def tune(df, x, split, solver="liblinear", quality_gate=False, repeats=1):
+    splits = [split] + [inner_folds(df, seed=42 + r) for r in range(1, repeats)]
+    assignments_all = [df.study.map(v.set_index("study").fold).to_numpy() for v in splits]
+    assignments = assignments_all[0]
     chosen, predictions, balance = {}, {}, {}
     for key, y in targets(df).items():
         known = np.isfinite(y)
         balance[key] = [{"fold": k, "positive": int((y[assignments == k] == 1).sum()),
                          "negative": int((y[assignments == k] == 0).sum())} for k in range(2)]
-        usable = all(np.unique(y[known & (assignments == k)]).size == 2 for k in range(2))
+        usable = all(np.unique(y[known & (assigned == k)]).size == 2
+                     for assigned in assignments_all for k in range(2))
         if key == "region" or not usable:
             chosen[key] = dict(C=0.1, balanced=True, threshold=0.5, selection="fixed")
             if not usable:
@@ -70,15 +73,16 @@ def tune(df, x, split, solver="liblinear", quality_gate=False):
         best = None
         for regularization in (0.01, 0.1, 1.0):
             for balanced in (False, True):
-                p = np.full(len(df), np.nan)
-                for k in range(2):
-                    train, valid = known & (assignments != k), known & (assignments == k)
-                    h = fit_head(x[train], y[train], regularization, balanced, solver)
-                    p[valid] = probability(x[valid], h)
+                p = np.full((repeats, len(df)), np.nan)
+                for r, assigned in enumerate(assignments_all):
+                    for k in range(2):
+                        train, valid = known & (assigned != k), known & (assigned == k)
+                        h = fit_head(x[train], y[train], regularization, balanced, solver)
+                        p[r, valid] = probability(x[valid], h)
                 if key.endswith("quality"):
-                    score, threshold = roc_auc_score(y[known], p[known]), 0.5
+                    score, threshold = roc_auc_score(np.tile(y[known], repeats), p[:, known].ravel()), 0.5
                 else:
-                    score, threshold = max((f1_score(y[known], p[known] >= t, zero_division=0), float(t))
+                    score, threshold = max((f1_score(np.tile(y[known], repeats), p[:, known].ravel() >= t, zero_division=0), float(t))
                                            for t in np.arange(1, 20) / 20)
                 # Строгое > оставляет меньший C; порог при равенстве берётся больший.
                 if best is None or score > best[0]:
@@ -93,12 +97,16 @@ def tune(df, x, split, solver="liblinear", quality_gate=False):
             if any(t not in predictions for t in [key, *applicable]):
                 raise ValueError("Gate requires complete inner OOF scores")
             mask = (df.anatomical_region == region).to_numpy()
-            any_type = np.logical_or.reduce([predictions[t][mask] >= chosen[t]["threshold"] for t in applicable])
-            _, threshold = max((f1_score(df.quality_class.to_numpy()[mask],
-                                any_type & (predictions[key][mask] >= t), zero_division=0), float(t))
+            any_type = np.logical_or.reduce([predictions[t][:, mask].ravel() >= chosen[t]["threshold"] for t in applicable])
+            _, threshold = max((f1_score(np.tile(df.quality_class.to_numpy()[mask], repeats),
+                                any_type & (predictions[key][:, mask].ravel() >= t), zero_division=0), float(t))
                                for t in np.arange(20) / 20)
             chosen[key].update(threshold=threshold, threshold_selection="inner_oof_quality_and_types")
-    return chosen, pd.DataFrame(predictions), balance
+    repeated = pd.DataFrame({key: values.ravel() for key, values in predictions.items()})
+    repeated.insert(0, "repeat", np.repeat(np.arange(repeats), len(df)))
+    repeated.insert(0, "image_id", np.tile(df.image_id, repeats))
+    averaged = pd.DataFrame({key: values.mean(axis=0) for key, values in predictions.items()})
+    return chosen, averaged, balance, repeated
 
 
 def manifest(audit):
@@ -144,7 +152,7 @@ def predictions(model, df, x):
     return out
 
 
-def run(output, device, resamples, backbone="b0", weights=None, pooling="global", head_solver="liblinear", features_from=None, outer_seed=None, quality_gate=False):
+def run(output, device, resamples, backbone="b0", weights=None, pooling="global", head_solver="liblinear", features_from=None, outer_seed=None, quality_gate=False, aspect="pixel_grid", inner_repeats=1):
     started = perf_counter()
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     torch.set_num_threads(2)
@@ -180,7 +188,7 @@ def run(output, device, resamples, backbone="b0", weights=None, pooling="global"
         code.append(C.ROOT / "src/solution/medimage_davit.py")
     recipe = dict(id=f"frozen-{backbone}-{pooling}-{head_solver}-gate{int(quality_gate)}-v2",
                   backbone=backbone, pooling=pooling, head_solver=head_solver, source_weights=source,
-                  quality_gate=quality_gate,
+                  quality_gate=quality_gate, aspect=aspect, inner_repeats=inner_repeats,
                   features_from=str(features_from) if features_from else None,
                   imported_features_sha256=sha(features_from / "features.npz") if features_from else None,
                   label_policy="criteria_v2", seed=42, resamples=resamples,
@@ -205,20 +213,24 @@ def run(output, device, resamples, backbone="b0", weights=None, pooling="global"
         train = df if name == "final" else df[df.fold != name]
         splits[name] = inner_folds(train.reset_index(drop=True))
         splits[name].to_csv(output / f"inner_{name}.csv", index=False)
+        for r in range(1, inner_repeats):
+            inner_folds(train.reset_index(drop=True), seed=42+r).to_csv(output / f"inner_{name}_repeat{r}.csv", index=False)
 
     cache = output / "features.npz"
     restored = output if cache.exists() else features_from
     if restored is not None:
         if restored != output:
             metadata = json.loads((restored / "final/model.json").read_text())
+            if (restored / "invalid.json").exists() or metadata.get("recipe", "").startswith("dinov3-last2-"):
+                raise ValueError("Adapted or invalid OOF features cannot be imported as a frozen cache")
             imported = pd.read_csv(restored / "manifest.csv").drop(columns="fold")
             current = pd.read_csv(output / "manifest.csv").drop(columns="fold")
             pd.testing.assert_frame_equal(imported, current)
             if (metadata.get("backbone", "b0") != backbone or metadata.get("pooling", "global") != pooling or
-                metadata["preprocess"] != preprocessing(backbone) or
+                metadata["preprocess"] != preprocessing(backbone, aspect) or
                 metadata["source_weights"] != source or sha(restored / "encoder.pt") != metadata["encoder_sha256"]):
                 raise ValueError("Imported frozen cache is incompatible")
-        model = Model(device=device, backbone=backbone, encoder_config=encoder_config, pooling=pooling)
+        model = Model(device=device, backbone=backbone, encoder_config=encoder_config, pooling=pooling, aspect=aspect)
         model.encoder.load_state_dict(torch.load(restored / "encoder.pt", map_location="cpu", weights_only=True))
         with np.load(restored / "features.npz", allow_pickle=False) as stored:
             if not np.array_equal(stored["image_ids"], df.image_id.to_numpy()):
@@ -234,7 +246,7 @@ def run(output, device, resamples, backbone="b0", weights=None, pooling="global"
                 raise ValueError("Existing encoder differs from imported cache")
             shutil.copyfile(restored / "features.npz", cache)
     else:
-        model = Model(device=device, pretrained=True, backbone=backbone, weights=weights, pooling=pooling)
+        model = Model(device=device, pretrained=True, backbone=backbone, weights=weights, pooling=pooling, aspect=aspect)
         x = model.features([C.DATA / p for p in df.path_to_study])
         torch.save({k: v.detach().cpu() for k, v in model.encoder.state_dict().items()}, output / "encoder.pt")
         np.savez_compressed(cache, features=x, image_ids=df.image_id.to_numpy(dtype=str))
@@ -257,7 +269,8 @@ def run(output, device, resamples, backbone="b0", weights=None, pooling="global"
         train, valid = (df.fold != fold).to_numpy(), (df.fold == fold).to_numpy()
         if set(df[train].study) & set(df[valid].study):
             raise ValueError("Study leakage")
-        parameters, inner, balance = tune(df[train].reset_index(drop=True), x[train], splits[fold], head_solver, quality_gate)
+        parameters, inner, balance, repeated = tune(df[train].reset_index(drop=True), x[train], splits[fold], head_solver, quality_gate, inner_repeats)
+        repeated.to_csv(destination / "repeated_inner_predictions.csv", index=False)
         write_json(destination / "selection.json", dict(parameters=parameters, balance=balance))
         inner.insert(0, "image_id", df[train].image_id.to_numpy())
         inner.to_csv(destination / "inner_predictions.csv", index=False)
@@ -283,7 +296,8 @@ def run(output, device, resamples, backbone="b0", weights=None, pooling="global"
     subset = oof[~((oof.anatomical_region == C.REGION_FEMUR) & oof.study.isin(disputed))].reset_index(drop=True)
     report["side_sensitivity"] = dict(excluded_paired_studies=len(disputed), fixed_oof=evaluate(subset, 0))
     write_json(output / "metrics.json", report)
-    parameters, inner, balance = tune(df, x, splits["final"], head_solver, quality_gate)
+    parameters, inner, balance, repeated = tune(df, x, splits["final"], head_solver, quality_gate, inner_repeats)
+    repeated.to_csv(output / "final_repeated_inner_predictions.csv", index=False)
     write_json(output / "final_selection.json", dict(parameters=parameters, balance=balance))
     inner.insert(0, "image_id", df.image_id.to_numpy())
     inner.to_csv(output / "final_inner_predictions.csv", index=False)
@@ -313,6 +327,8 @@ if __name__ == "__main__":
     parser.add_argument("--features-from", type=Path)
     parser.add_argument("--outer-seed", type=int, help="Sensitivity split; never select seed by model results")
     parser.add_argument("--quality-gate", action="store_true", help="Select a quality gate using inner OOF only")
+    parser.add_argument("--aspect", choices=("pixel_grid", "physical"), default="pixel_grid")
+    parser.add_argument("--inner-repeats", type=int, choices=(1, 3), default=1)
     args = parser.parse_args()
     run(args.output, args.device, args.resamples, args.backbone, args.weights,
-        args.pooling, args.head_solver, args.features_from, args.outer_seed, args.quality_gate)
+        args.pooling, args.head_solver, args.features_from, args.outer_seed, args.quality_gate, args.aspect, args.inner_repeats)

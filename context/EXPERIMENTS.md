@@ -166,3 +166,11 @@ python -m src.utils.train_blend artifacts/e2-dinov3-large artifacts/e1-medimagei
 python -m src.utils.check_protocol artifacts/e5-blend
 HF_HUB_OFFLINE=1 python -m src.utils.check --device cuda --model artifacts/e5-blend/final
 ```
+
+## Завершение ML-исследования
+
+Последующий цикл физической геометрии, повторных внутренних разбиений и ограниченного
+дообучения завершён: [ML_CYCLE3](ML_CYCLE3.md). Устойчивого улучшения E5 не найдено,
+этот рецепт выбран окончательным для текущей поставки. Все новые отрицательные
+результаты сохранены. Разработческие метрики E5 остаются прежними; новый цикл
+не является новым независимым подтверждением его качества.

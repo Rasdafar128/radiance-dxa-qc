@@ -3,6 +3,8 @@
 import numpy as np
 from PIL import Image, ImageOps
 
+from .. import config as C
+
 
 PREPROCESS = {
     "size": 224, "resize": "bicubic_letterbox", "intensity": "stored_bit_range",
@@ -41,8 +43,17 @@ def pixels(ds):
 
 def prepare(ds, recipe=PREPROCESS):
     image = Image.fromarray(pixels(ds)).convert("RGB")
-    image = ImageOps.pad(image, (recipe["size"], recipe["size"]),
-                         method=Image.Resampling.BICUBIC, color=(0, 0, 0))
+    if recipe["aspect"] == "physical":
+        width, height = image.width * C.PIXEL_MM_X, image.height * C.PIXEL_MM_Y
+        scale = recipe["size"] / max(width, height)
+        size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        image = image.resize(size, Image.Resampling.BICUBIC)
+        image = ImageOps.pad(image, (recipe["size"], recipe["size"]), color=(0, 0, 0))
+    elif recipe["aspect"] == "pixel_grid":
+        image = ImageOps.pad(image, (recipe["size"], recipe["size"]),
+                             method=Image.Resampling.BICUBIC, color=(0, 0, 0))
+    else:
+        raise ValueError("Unknown pixel aspect recipe")
     a = np.asarray(image, dtype=np.float32) / 255
     a = (a - np.asarray(recipe["mean"], dtype=np.float32)) / np.asarray(recipe["std"], dtype=np.float32)
     return np.ascontiguousarray(a.transpose(2, 0, 1))

@@ -26,10 +26,12 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def preprocessing(backbone):
+def preprocessing(backbone, aspect="pixel_grid"):
     if backbone not in BACKBONES:
         raise ValueError(f"Unsupported backbone: {backbone}")
-    recipe = dict(PREPROCESS, size=224 if backbone == "b0" else 448)
+    if aspect not in ("pixel_grid", "physical"):
+        raise ValueError("Unknown pixel aspect recipe")
+    recipe = dict(PREPROCESS, size=224 if backbone == "b0" else 448, aspect=aspect)
     if backbone == "medimageinsight":
         recipe["size"] = 512
     if backbone == "medsiglip":
@@ -90,9 +92,9 @@ class MedImageInsight(torch.nn.Module):
 
 
 class Model:
-    def __init__(self, device="cpu", pretrained=False, backbone="b0", weights=None, encoder_config=None, pooling="global"):
+    def __init__(self, device="cpu", pretrained=False, backbone="b0", weights=None, encoder_config=None, pooling="global", aspect="pixel_grid"):
         self.device = torch.device(device)
-        recipe = preprocessing(backbone)
+        recipe = preprocessing(backbone, aspect)
         if pooling not in ("global", "spatial") or (pooling == "spatial" and backbone != "dinov3-large"):
             raise ValueError("Spatial pooling is defined only for DINOv3 Large")
         if backbone == "b0":
@@ -244,12 +246,13 @@ class Model:
             model.metadata = payload
             return model
         backbone = payload.get("backbone", "b0")
-        if payload["schema"] != 1 or payload["targets"] != C.TARGETS or payload["preprocess"] != preprocessing(backbone):
+        aspect = payload["preprocess"]["aspect"]
+        if payload["schema"] != 1 or payload["targets"] != C.TARGETS or payload["preprocess"] != preprocessing(backbone, aspect):
             raise ValueError("Incompatible model metadata")
         if digest(path / "encoder.pt") != payload["encoder_sha256"]:
             raise ValueError("Encoder checksum mismatch")
         model = cls(device=device, backbone=backbone, encoder_config=payload.get("encoder_config"),
-                    pooling=payload.get("pooling", "global"))
+                    pooling=payload.get("pooling", "global"), aspect=aspect)
         model.encoder.load_state_dict(torch.load(path / "encoder.pt", map_location="cpu", weights_only=True))
         model.heads = payload.pop("heads")
         if set(model.heads) != set(HEADS):
