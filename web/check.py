@@ -153,32 +153,6 @@ class GatewayCheck(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", response.headers["content-security-policy"])
         self.assertEqual(response.headers["cache-control"], "no-store")
 
-    def test_segmentation_unavailable_and_bad_input(self):
-        prompt = {"image": "data:image/png;base64,AA==", "box": [0, 0, 1, 1]}
-        self.assertEqual(self.client.post('/api/segment', json=prompt).status_code, 503)
-        prompt['box'] = [1, 0, 0, 1]
-        self.assertEqual(self.client.post('/api/segment', json=prompt).status_code, 400)
-        with patch('web.app.MAX_REQUEST', 8):
-            self.assertEqual(self.client.post('/api/segment', json=prompt).status_code, 413)
-        self.assertFalse(app.state.lock.locked())
-
-    def test_segmentation_proxy_preserves_mask(self):
-        from src.solution.segmentation import png_data
-        mask = png_data(np.array([[0, 255], [255, 0]], dtype=np.uint8))
-        expected = dict(model='Radiance Anatomy', mask=mask, overlay=mask, width=2, height=2, empty=False)
-        prompt = dict(image=mask, box=[0, 0, 1, 1])
-        calls = []
-        def upstream(request):
-            if request.url.path == '/health':
-                return httpx.Response(200, json=dict(status='ok', model='Radiance', version='1.0',
-                    backbones=['dinov3-large', 'medimageinsight'], segmentation=True))
-            calls.append(request)
-            return httpx.Response(200, json=expected)
-        self.mock._transport = httpx.MockTransport(upstream)
-        self.assertEqual(self.client.post('/api/segment', json=prompt).json(), expected)
-        self.assertEqual(calls[0].url.path, '/segment')
-        self.assertFalse(app.state.lock.locked())
-
 
 if __name__ == "__main__":
     unittest.main()

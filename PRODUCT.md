@@ -30,10 +30,9 @@ prototype; it does not diagnose osteoporosis or replace expert review.
 
 ## Operating Context
 
-The website is hosted at sefixnep.ru; the deployment supports a VDS calling a
-separately hosted vast.ai GPU service. Updates are deployed with the owner.
-The delivery includes the website, containers, documentation, model release
-and research audit. Local feature verification does not imply a live rollout.
+The website is hosted at https://sefixnep.ru and calls a separately hosted GPU service.
+Deployment is managed with the owner. The current delivery includes the
+working website, containers, documentation, model release and research audit.
 
 ## Capabilities and Constraints
 
@@ -42,10 +41,6 @@ and research audit. Local feature verification does not imply a live rollout.
 - Inspect the uploaded full-frame DICOM beside findings, with zoom, pan,
   brightness, contrast and fullscreen. Display adjustments never change inference.
 - No violation masks, coordinates or heatmaps; synthetic examples contain no DICOM.
-- Optional experimental anatomy segmentation: the user supplies a box and SAM
-  ViT-L produces a mask. It can be hidden or downloaded as a preview-sized PNG.
-  This does not localize violations, identify anatomy labels or change Radiance.
-  Segmentation accuracy on DXA has not been measured against reference masks.
 - No accounts or persistent study archive in this version.
 - Files are processed temporarily; no browser-to-GPU credentials.
 - The model reports image acquisition quality, not patient health.

@@ -7,8 +7,7 @@ let file = null,
   selected = 0,
   filter = "all",
   demo = false,
-  busy = false,
-  segmentationReady = false;
+  busy = false;
 const spine = "Поясничный отдел позвоночника";
 const hip = "Проксимальный отдел бедра";
 const criteria = {
@@ -71,8 +70,6 @@ async function health() {
     });
     if (!response.ok) throw new Error();
     const data = await response.json();
-    segmentationReady = data.segmentation === true;
-    syncSegmentationView();
     $("connection").className = "connection online";
     $("connection-text").textContent = data.busy
       ? "Модель занята"
@@ -81,8 +78,6 @@ async function health() {
       ? "Модель обрабатывает другой пакет"
       : "Соединение с Radiance установлено";
   } catch {
-    segmentationReady = false;
-    syncSegmentationView();
     $("connection").className = "connection offline";
     $("connection-text").textContent = "Модель недоступна";
     $("connection").title =
@@ -160,7 +155,7 @@ zone.addEventListener("drop", (event) => {
 window.addEventListener("dragover", (event) => event.preventDefault());
 window.addEventListener("drop", (event) => event.preventDefault());
 window.addEventListener("beforeunload", (event) => {
-  if (busy || segmentation.request) {
+  if (busy) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -297,7 +292,6 @@ function applyView() {
   view.x = Math.max(-maxX, Math.min(maxX, view.x));
   view.y = Math.max(-maxY, Math.min(maxY, view.y));
   scan.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
-  $("anatomy-mask").style.transform = $("anatomy-box").style.transform = scan.style.transform;
   scan.style.filter = `brightness(${$("image-brightness").value}%) contrast(${$("image-contrast").value}%)`;
   $("zoom-value").textContent = view.zoom.toLocaleString("ru-RU", { minimumFractionDigits: 1 }) + "×";
   $("brightness-value").textContent = $("image-brightness").value + "%";
@@ -307,7 +301,6 @@ function applyView() {
   for (const id of ["fit-image", "reset-image", "image-brightness", "image-contrast"])
     $(id).disabled = !active;
   stage.classList.toggle("is-zoomed", active && view.zoom > 1);
-  syncSegmentationView();
 }
 function resetView() {
   view.zoom = 1;
@@ -340,7 +333,6 @@ function renderViewer(visible) {
     : demo ? "В учебном примере нет DICOM. Загрузите свой файл, чтобы рассмотреть снимок."
     : preview?.message || "Превью недоступно. Результат проверки и CSV сохранены.";
   if (view.index !== selected || view.source !== source) {
-    clearSegmentation();
     view.index = selected;
     view.source = source;
     if (source) {
@@ -384,10 +376,6 @@ stage.addEventListener("keydown", (event) => {
   event.preventDefault();
 });
 stage.addEventListener("pointerdown", (event) => {
-  if (segmentation.selecting && event.button === 0 && event.isPrimary) {
-    selectAnatomyPoint(event);
-    return;
-  }
   if (scan.hidden || view.zoom <= 1 || event.button !== 0 || !event.isPrimary) return;
   dragging = { id: event.pointerId, x: event.clientX - view.x, y: event.clientY - view.y };
   stage.setPointerCapture(event.pointerId);
@@ -580,7 +568,6 @@ for (const button of document.querySelectorAll("[data-filter]"))
     render();
   });
 $("new-upload").addEventListener("click", () => {
-  clearSegmentation();
   $("check-view").classList.remove("has-results");
   rows = [];
   previews = [];
@@ -668,149 +655,4 @@ $("show-demo").addEventListener("click", () => {
       .join("\n");
   demo = true;
   showResults();
-});
-
-const segmentation = { selecting: false, first: null, box: null, mask: null, request: null };
-const boxInputs = ['box-left', 'box-top', 'box-right', 'box-bottom'].map($);
-function syncSegmentationView() {
-  const visible = segmentationReady && !scan.hidden && !demo && rows.length > 0;
-  $('segmentation').hidden = !visible;
-  $('anatomy-mask').hidden = !visible || !segmentation.mask || !$('show-anatomy').checked;
-  $('anatomy-box').toggleAttribute('hidden', !visible || (!segmentation.box && !segmentation.first));
-  stage.classList.toggle('is-selecting', visible && segmentation.selecting);
-  $('select-anatomy').setAttribute('aria-pressed', String(segmentation.selecting));
-  $('select-anatomy').disabled = Boolean(segmentation.request);
-  $('segment-anatomy').disabled = !visible || !segmentation.box || Boolean(segmentation.request);
-  $('segment-anatomy').textContent = segmentation.request ? 'Строим маску…' : 'Построить маску';
-  $('segmentation').setAttribute('aria-busy', String(Boolean(segmentation.request)));
-  $('clear-anatomy').hidden = !segmentation.box && !segmentation.mask && !segmentation.request;
-  $('segmentation-result').hidden = !segmentation.mask;
-  for (const input of boxInputs) input.disabled = Boolean(segmentation.request);
-  if (scan.naturalWidth) {
-    const width = scan.naturalWidth, height = scan.naturalHeight;
-    $('anatomy-box').setAttribute('viewBox', `0 0 ${width} ${height}`);
-    const rect = $('anatomy-box').firstElementChild;
-    rect.toggleAttribute('hidden', !segmentation.box);
-    if (segmentation.box) {
-      const [x0, y0, x1, y1] = segmentation.box;
-      for (const [key, value] of Object.entries({x:x0*width, y:y0*height, width:(x1-x0)*width, height:(y1-y0)*height}))
-        rect.setAttribute(key, String(value));
-    }
-    const point = $('anatomy-box').lastElementChild;
-    point.toggleAttribute('hidden', !segmentation.first);
-    if (segmentation.first) {
-      point.setAttribute('cx', segmentation.first[0] * width);
-      point.setAttribute('cy', segmentation.first[1] * height);
-    }
-  }
-}
-function clearSegmentation() {
-  segmentation.request?.abort();
-  Object.assign(segmentation, {selecting:false, first:null, box:null, mask:null, request:null});
-  $('anatomy-mask').removeAttribute('src');
-  $('show-anatomy').checked = true;
-  $('box-details').open = false;
-  [25, 10, 75, 90].forEach((value, i) => { boxInputs[i].value = value; });
-  $('segmentation-status').textContent = 'Выделение не меняет оценку качества и CSV.';
-  syncSegmentationView();
-}
-function setAnatomyBox(box) {
-  segmentation.mask = null;
-  $('anatomy-mask').removeAttribute('src');
-  segmentation.box = box;
-  syncSegmentationView();
-}
-for (const input of boxInputs) input.addEventListener('input', () => {
-  segmentation.selecting = false;
-  segmentation.first = null;
-  const box = boxInputs.map(input => Number(input.value) / 100);
-  const [x0, y0, x1, y1] = box;
-  const valid = boxInputs.every(input => input.value !== '' && input.validity.valid)
-    && x0 < x1 && y0 < y1;
-  setAnatomyBox(valid ? box : null);
-  $('segmentation-status').textContent = valid ? 'Рамка готова. Можно построить маску.' : 'Правая граница должна быть правее левой, нижняя — ниже верхней.';
-});
-$('select-anatomy').addEventListener('click', () => {
-  segmentation.selecting = !segmentation.selecting;
-  segmentation.first = null;
-  if (segmentation.selecting) {
-    setAnatomyBox(null);
-    view.zoom = 1;
-    view.x = view.y = 0;
-    applyView();
-    $('segmentation-status').textContent = 'Нажмите на два противоположных угла рамки. Можно также ввести границы ниже.';
-    stage.focus({preventScroll:true});
-    stage.scrollIntoView({block:'center'});
-  } else $('segmentation-status').textContent = 'Выбор рамки отменён.';
-  syncSegmentationView();
-});
-function selectAnatomyPoint(event) {
-  const bounds = stage.getBoundingClientRect();
-  const fit = Math.min(stage.clientWidth / scan.naturalWidth, stage.clientHeight / scan.naturalHeight);
-  const width = scan.naturalWidth * fit * view.zoom, height = scan.naturalHeight * fit * view.zoom;
-  const x = (event.clientX - bounds.left - stage.clientWidth / 2 - view.x + width / 2) / width;
-  const y = (event.clientY - bounds.top - stage.clientHeight / 2 - view.y + height / 2) / height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  if (!segmentation.first) {
-    segmentation.first = [x,y];
-    $('segmentation-status').textContent = 'Первый угол выбран. Нажмите на противоположный угол.';
-    syncSegmentationView();
-    return;
-  }
-  const [a,b] = segmentation.first;
-  const box = [Math.min(a,x), Math.min(b,y), Math.max(a,x), Math.max(b,y)];
-  if ((box[2]-box[0])*scan.naturalWidth < 2 || (box[3]-box[1])*scan.naturalHeight < 2) {
-    $('segmentation-status').textContent = 'Рамка слишком мала. Выберите угол дальше от первого.';
-    return;
-  }
-  segmentation.selecting = false;
-  segmentation.first = null;
-  box.forEach((value, i) => { boxInputs[i].value = Math.round(value*100); });
-  setAnatomyBox(box);
-  $('segmentation-status').textContent = 'Рамка готова. Можно построить маску.';
-  $('segment-anatomy').focus({preventScroll:true});
-  $('segmentation').scrollIntoView({block:'nearest'});
-}
-$('clear-anatomy').addEventListener('click', clearSegmentation);
-$('show-anatomy').addEventListener('change', syncSegmentationView);
-$('segment-anatomy').addEventListener('click', async () => {
-  if (!segmentation.box || segmentation.request || scan.hidden) return;
-  const controller = new AbortController();
-  segmentation.request = controller;
-  segmentation.selecting = false;
-  $('segmentation-status').textContent = 'Модель выделяет структуру. При первом запросе загружаются веса.';
-  syncSegmentationView();
-  try {
-    const response = await fetch('/api/segment', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:view.source, box:segmentation.box}),
-      signal:AbortSignal.any([controller.signal, AbortSignal.timeout(625000)]),
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Не удалось построить маску. Повторите позже.');
-    if (segmentation.request !== controller) return;
-    if (!result.mask?.startsWith('data:image/png;base64,') || !result.overlay?.startsWith('data:image/png;base64,'))
-      throw new Error('Сервис вернул неполную маску. Повторите позже.');
-    segmentation.mask = result.mask;
-    $('anatomy-mask').src = result.overlay;
-    $('show-anatomy').checked = true;
-    $('segmentation-status').textContent = result.empty
-      ? 'В выбранной области маска не найдена. Измените рамку и повторите.'
-      : `Маска готова · ${result.width} × ${result.height} px. Проверьте контур: модель может захватить фон или соседние структуры.`;
-  } catch (error) {
-    if (segmentation.request === controller)
-      $('segmentation-status').textContent = error.name === 'TimeoutError' ? 'Время ожидания истекло. Повторите позже.' : error.message;
-  } finally {
-    if (segmentation.request === controller) {
-      segmentation.request = null;
-      syncSegmentationView();
-    }
-  }
-});
-$('download-anatomy').addEventListener('click', () => {
-  if (!segmentation.mask) return;
-  const link = element('a');
-  link.href = segmentation.mask;
-  link.download = basename(rows[selected].path_to_study).replace(/\.[^.]+$/, '') + '-anatomy-mask.png';
-  link.click();
 });

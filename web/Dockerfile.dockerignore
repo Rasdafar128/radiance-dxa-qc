@@ -8,7 +8,6 @@
 !src/solution
 !src/solution/__init__.py
 !src/solution/dicom.py
-!src/solution/segmentation.py
 web/.venv
 web/__pycache__
 web/**/*.pyc

@@ -769,32 +769,6 @@ tbody tr:hover {
   width: 100%; height: 100%; object-fit: contain;
   transform-origin: center; pointer-events: none;
 }
-.viewer-stage #anatomy-mask, #anatomy-box {
-  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
-  transform-origin: center;
-}
-.viewer-stage.is-selecting { cursor: crosshair; touch-action: manipulation; }
-.segmentation { padding: 20px 22px; border-top: 1px solid var(--line); }
-.segmentation-heading { display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: baseline; }
-.segmentation h3 { font-size: 15px; margin: 0; }
-.segmentation-heading span, .segmentation p, .segmentation summary, .segmentation-result {
-  font-size: 12px; line-height: 1.7;
-}
-.segmentation-heading span, .segmentation-note { color: var(--muted); }
-.segmentation p { margin: 10px 0 14px; }
-.segmentation summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--blue); }
-.box-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.box-inputs label { font-size: 12px; color: var(--muted); }
-.box-inputs input { width: 100%; min-width: 0; min-height: 44px; margin-top: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--paper); }
-.segmentation-actions, .segmentation-result { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
-.segmentation-result { margin-top: 16px; }
-.segmentation-result label { min-height: 44px; display: inline-flex; gap: 8px; align-items: center; }
-.segmentation-result input { accent-color: var(--blue); width: 18px; height: 18px; }
-.segmentation .segmentation-note { margin-bottom: 0; }
-@media (max-width: 480px) {
-  .segmentation { padding: 18px 16px; }
-  .box-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 .viewer-empty {
   text-align: center;
   color: #c7d3e2;
