@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+artifacts/
+logs/
+runtime/
+out/
+weights/*.pt
+weights/rad_dino/
+weights/dinov2_*/
+weights/dinov3_l/
+weights/mii/
+.DS_Store
+reports/*.csv
+runs/

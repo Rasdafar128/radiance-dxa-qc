@@ -17,13 +17,13 @@ from .. import config as C
 from ..solution.model import Model
 
 
-def check(device):
+def check(device, run=C.ARTIFACTS / "e5-blend", probability_atol=1e-6):
     torch.set_num_threads(2)
-    run = C.ARTIFACTS / "e5-blend"
     manifest = pd.read_csv(run / "manifest.csv")
     stored = pd.read_csv(run / "oof.csv").set_index("image_id", verify_integrity=True)
-    report = dict(source="raw DICOM through Model.predict", device=device,
+    report = dict(source="raw DICOM through Model.predict", device=device, probability_atol=probability_atol,
                   cached_features_used=False, final_all_data_model_used=False, folds=[])
+    observed = []
     for fold in range(3):
         rows = manifest[manifest.fold == fold]
         expected = stored.reindex(rows.image_id)
@@ -33,26 +33,38 @@ def check(device):
         assert actual.processing_status.eq("Success").all()
         np.testing.assert_array_equal(actual.anatomical_region, expected.predicted_region)
         np.testing.assert_array_equal(actual.quality_class.to_numpy(dtype=int), expected.pred_quality)
-        np.testing.assert_allclose(actual.quality_prob, expected.prob_quality, rtol=0, atol=1e-6)
+        np.testing.assert_allclose(actual.quality_prob, expected.prob_quality, rtol=0, atol=probability_atol)
         for target, region, label in zip(C.TARGETS, C.TARGET_REGIONS, sum(C.VIOLATIONS.values(), [])):
             flags = (actual.anatomical_region == region) & actual.violation_type.map(lambda x: label in x.split(C.VIOLATION_SEP))
             np.testing.assert_array_equal(flags, expected["pred_" + target])
         report["folds"].append(dict(fold=fold, images=len(rows), all_decisions_match=True,
             max_probability_error=float(np.max(np.abs(actual.quality_prob.to_numpy() - expected.prob_quality.to_numpy())))))
+        fresh = expected.copy()
+        fresh['prob_quality'] = actual.quality_prob.to_numpy()
+        observed.append(fresh)
         del model
         gc.collect()
         if device.startswith("cuda"):
             torch.cuda.empty_cache()
     assert sum(f["images"] for f in report["folds"]) == len(stored) == 249
+    from sklearn.metrics import f1_score, roc_auc_score
+
+    fresh = pd.concat(observed)
+    report['quality_f1'] = float(f1_score(fresh.true_quality, fresh.pred_quality))
+    report['quality_auc'] = float(roc_auc_score(fresh.true_quality, fresh.prob_quality))
+    report['reference_auc'] = float(roc_auc_score(stored.true_quality, stored.prob_quality))
     return report
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--run", type=Path, default=C.ARTIFACTS / "e5-blend")
+    parser.add_argument("--probability-atol", type=float, default=1e-6,
+                        help="Explicit tolerance for cross-device floating-point differences; decisions must match exactly")
     parser.add_argument("--output", type=Path, default=C.ARTIFACTS / "validation-review/raw_pixels.json")
     args = parser.parse_args()
-    result = check(args.device)
+    result = check(args.device, args.run, args.probability_atol)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

@@ -254,7 +254,7 @@ function showResults() {
   $("results").hidden = false;
   $("demo-notice").hidden = !demo;
   $("result-summary").textContent =
-    `${rows.length} файлов · ${rows.filter(attention).length} с находками · ${rows.filter(failed).length} не обработано${demo ? "" : " · Radiance"}`;
+    `Файлов: ${rows.length} · ${rows.filter(attention).length} с находками · ${rows.filter(failed).length} не обработано${demo ? "" : " · Radiance"}`;
   $("count-all").textContent = rows.length;
   $("count-attention").textContent = rows.filter(attention).length;
   $("count-failure").textContent = rows.filter(failed).length;

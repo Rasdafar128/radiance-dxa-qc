@@ -1,7 +1,7 @@
 {
   "selected": "Radiance",
   "parent_recipe_sha256": "7f2fa8a5caa9eae6a0004c3ffaf829bc58a1d01d15ae4d35462ef03d3cc82fab",
-  "reason": "Physical aspect worsened quality; repeated inner tuning failed split137 replication; limited adaptation and its blend did not beat the selected frozen ensemble.",
+  "reason": "Axis and hip-field geometry improve both grouped splits; full geometry hurts other criteria.",
   "members": [
     "dinov3-large",
     "medimageinsight"
@@ -21,14 +21,14 @@
   "training_studies": 100,
   "metrics": {
     "primary": {
-      "quality_f1": 0.6134969325153374,
-      "quality_auc": 0.8047708725674828,
-      "macro_f1": 0.45999999999999996
+      "quality_f1": 0.6756756756756757,
+      "quality_auc": 0.8211707470182047,
+      "macro_f1": 0.6037566137566137
     },
     "secondary": {
-      "quality_f1": 0.5771812080536913,
-      "quality_auc": 0.7543157564344005,
-      "macro_f1": 0.4205171299288947
+      "quality_f1": 0.6206896551724138,
+      "quality_auc": 0.7797394852479598,
+      "macro_f1": 0.5242424242424242
     }
   },
   "selection_uses_development_oof": true,
@@ -44,7 +44,13 @@
     "member_0/model.json": "137389e632a9f9852db0442f10a2d700f62989cd44023274c6dd508a552be722",
     "member_1/encoder.pt": "9b219e75b62524529d6c12551d6e7dd5f57189d3e873eb73eef7a3ed937bc82e",
     "member_1/model.json": "7cc26f700c3a9e2f46ee1ef71f54991bf68e2c4e99425d4c08976cafbf040fed",
-    "model.json": "c6213a14039a7ccee57c083c2c062e7c95339f1654dffdb6519b58a9910c52ba"
+    "model.json": "f76ef0dcd6be9421b399e661e0a9fd8294d98c563f8c85b270f12f3698c14e97"
   },
-  "provenance": "research/results/radiance_provenance.json"
+  "provenance": "research/results/unification.json",
+  "recipe": "radiance-geometry-v1",
+  "geometry_tasks": [
+    "spine_axis",
+    "hip_roi"
+  ],
+  "quality_aggregation": "0.5 direct quality + 0.5 noisy-OR of criteria"
 }

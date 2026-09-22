@@ -1,0 +1,400 @@
+{
+  "procedure": "study-bootstrap-fixed-oof-v1",
+  "resamples": 2000,
+  "seed": 42,
+  "images": 249,
+  "studies": 100,
+  "metrics": {
+    "quality_all": {
+      "n": 249,
+      "positives": 72,
+      "tp": 45,
+      "fp": 28,
+      "fn": 27,
+      "tn": 149,
+      "f1": 0.6206896551724138,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.7797394852479598,
+      "pr_auc": 0.6739502893657583,
+      "sensitivity": 0.625,
+      "specificity": 0.8418079096045198,
+      "balanced_accuracy": 0.73340395480226,
+      "ci95": {
+        "f1": {
+          "low": 0.5109489051094891,
+          "high": 0.7114207712433169,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.7008064022826113,
+          "high": 0.8510351151668638,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.5543340987220557,
+          "high": 0.7815706626135961,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.5,
+          "high": 0.7407407407407407,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.7826023017902813,
+          "high": 0.8988905279015754,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.6688840593261627,
+          "high": 0.7978796136131712,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 48
+    },
+    "quality_spine": {
+      "n": 99,
+      "positives": 31,
+      "tp": 19,
+      "fp": 9,
+      "fn": 12,
+      "tn": 59,
+      "f1": 0.6440677966101694,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.8007590132827325,
+      "pr_auc": 0.6471730498037808,
+      "sensitivity": 0.6129032258064516,
+      "specificity": 0.8676470588235294,
+      "balanced_accuracy": 0.7402751423149905,
+      "ci95": {
+        "f1": {
+          "low": 0.4905467847516365,
+          "high": 0.7761194029850746,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.7009465686885042,
+          "high": 0.8897944586100569,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.4818692119158116,
+          "high": 0.8212051805479689,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.4375,
+          "high": 0.7857142857142857,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.7791847041847042,
+          "high": 0.9428772635814888,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.6443337789661319,
+          "high": 0.836199914748508,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 31
+    },
+    "quality_hip": {
+      "n": 150,
+      "positives": 41,
+      "tp": 26,
+      "fp": 19,
+      "fn": 15,
+      "tn": 90,
+      "f1": 0.6046511627906976,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.7686283284851197,
+      "pr_auc": 0.6879484341722195,
+      "sensitivity": 0.6341463414634146,
+      "specificity": 0.8256880733944955,
+      "balanced_accuracy": 0.729917207428955,
+      "ci95": {
+        "f1": {
+          "low": 0.4332692307692308,
+          "high": 0.7356624319419236,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.6465015134066584,
+          "high": 0.8661563556912394,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.49685736657000595,
+          "high": 0.8241170126145622,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.45454545454545453,
+          "high": 0.7906976744186046,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.7435897435897436,
+          "high": 0.9032538569424963,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.6336127405190884,
+          "high": 0.8128460650315172,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 28
+    },
+    "spine_position": {
+      "n": 99,
+      "positives": 6,
+      "tp": 4,
+      "fp": 1,
+      "fn": 2,
+      "tn": 92,
+      "f1": 0.7272727272727273,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.8978494623655914,
+      "pr_auc": 0.8216845878136201,
+      "sensitivity": 0.6666666666666666,
+      "specificity": 0.989247311827957,
+      "balanced_accuracy": 0.8279569892473118,
+      "ci95": {
+        "f1": {
+          "low": 0.2857142857142857,
+          "high": 1.0,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.656207997311828,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "pr_auc": {
+          "low": 0.44787946428571423,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "sensitivity": {
+          "low": 0.25,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "specificity": {
+          "low": 0.9666666666666667,
+          "high": 1.0,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.6093334441489362,
+          "high": 1.0,
+          "valid_resamples": 1996
+        }
+      },
+      "positive_studies": 6
+    },
+    "spine_axis": {
+      "n": 99,
+      "positives": 10,
+      "tp": 2,
+      "fp": 12,
+      "fn": 8,
+      "tn": 77,
+      "f1": 0.16666666666666666,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.7910112359550562,
+      "pr_auc": 0.27555555555555555,
+      "sensitivity": 0.2,
+      "specificity": 0.8651685393258427,
+      "balanced_accuracy": 0.5325842696629214,
+      "ci95": {
+        "f1": {
+          "low": 0.0,
+          "high": 0.37037037037037035,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.6543198643067359,
+          "high": 0.9149326610585974,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.1315610945198743,
+          "high": 0.5550538300547488,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.0,
+          "high": 0.5,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.788235294117647,
+          "high": 0.9325842696629213,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.41489059477756285,
+          "high": 0.6769662921348314,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 10
+    },
+    "spine_objects": {
+      "n": 99,
+      "positives": 17,
+      "tp": 12,
+      "fp": 4,
+      "fn": 5,
+      "tn": 78,
+      "f1": 0.7272727272727273,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.890961262553802,
+      "pr_auc": 0.6810901075087926,
+      "sensitivity": 0.7058823529411765,
+      "specificity": 0.9512195121951219,
+      "balanced_accuracy": 0.8285509325681493,
+      "ci95": {
+        "f1": {
+          "low": 0.5184587813620072,
+          "high": 0.8823871409028725,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.8008122907699665,
+          "high": 0.9666716867469879,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.4611098859602673,
+          "high": 0.8984240406730365,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.4666666666666667,
+          "high": 0.9230769230769231,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.8999683544303798,
+          "high": 0.9883720930232558,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.707264059732536,
+          "high": 0.9382839147286822,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 17
+    },
+    "hip_position": {
+      "n": 150,
+      "positives": 36,
+      "tp": 19,
+      "fp": 21,
+      "fn": 17,
+      "tn": 93,
+      "f1": 0.5,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.7071150097465887,
+      "pr_auc": 0.4869247081249204,
+      "sensitivity": 0.5277777777777778,
+      "specificity": 0.8157894736842105,
+      "balanced_accuracy": 0.6717836257309941,
+      "ci95": {
+        "f1": {
+          "low": 0.3157894736842105,
+          "high": 0.6516976062530532,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.5786547064777328,
+          "high": 0.826024211988797,
+          "valid_resamples": 2000
+        },
+        "pr_auc": {
+          "low": 0.2954571686608253,
+          "high": 0.7090210247693648,
+          "valid_resamples": 2000
+        },
+        "sensitivity": {
+          "low": 0.3333333333333333,
+          "high": 0.7142857142857143,
+          "valid_resamples": 2000
+        },
+        "specificity": {
+          "low": 0.7289680025344527,
+          "high": 0.8965678375765388,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.5667034105897871,
+          "high": 0.7708049670667505,
+          "valid_resamples": 2000
+        }
+      },
+      "positive_studies": 24
+    },
+    "hip_roi": {
+      "n": 150,
+      "positives": 7,
+      "tp": 4,
+      "fp": 5,
+      "fn": 3,
+      "tn": 138,
+      "f1": 0.5,
+      "f1_zero_denominator": false,
+      "roc_auc": 0.9110889110889111,
+      "pr_auc": 0.6238756613756613,
+      "sensitivity": 0.5714285714285714,
+      "specificity": 0.965034965034965,
+      "balanced_accuracy": 0.7682317682317682,
+      "ci95": {
+        "f1": {
+          "low": 0.15384615384615385,
+          "high": 0.75,
+          "valid_resamples": 2000
+        },
+        "roc_auc": {
+          "low": 0.7805200048043559,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "pr_auc": {
+          "low": 0.20113802225871188,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "sensitivity": {
+          "low": 0.2,
+          "high": 1.0,
+          "valid_resamples": 1996
+        },
+        "specificity": {
+          "low": 0.9328358208955224,
+          "high": 0.9928571428571429,
+          "valid_resamples": 2000
+        },
+        "balanced_accuracy": {
+          "low": 0.5755244755244755,
+          "high": 0.9832354586129753,
+          "valid_resamples": 1996
+        }
+      },
+      "positive_studies": 6
+    }
+  },
+  "region_accuracy": 1.0,
+  "macro_f1": 0.5242424242424242,
+  "macro_f1_ci95": [
+    0.40304030478871744,
+    0.5950589801315425
+  ],
+  "limitation": "Development OOF; intervals do not cover model/architecture selection variability."
+}

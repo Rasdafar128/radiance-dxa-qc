@@ -1,0 +1,631 @@
+{
+  "version": "1.0",
+  "date": "2026-09-22",
+  "branches": {
+    "main": "f8b1dfbcfd010a9e5720aa6fad80476d4b327ad5",
+    "dxa-qc": "396f10b"
+  },
+  "recipe": {
+    "id": "radiance-geometry-v1",
+    "parent": "artifacts/e5-blend",
+    "parent_recipe_sha256": "7f2fa8a5caa9eae6a0004c3ffaf829bc58a1d01d15ae4d35462ef03d3cc82fab",
+    "parent_features_sha256": "8848f3e0ec7dc0594375988ce6f1754cacdd4b7b61774df53ee1e4dfa0d01bac",
+    "manifest_sha256": "9049db1fc0190879add3a5ac81d15639d50837b3aabc87503221275f6c4f0315",
+    "geometry_columns": [
+      "angle",
+      "angle_end",
+      "height",
+      "lateral",
+      "top",
+      "below_lt",
+      "hip_found"
+    ],
+    "geometry_tasks": {
+      "spine_axis": [
+        0,
+        1
+      ],
+      "hip_roi": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "geometry_head": {
+      "C": 1.0,
+      "balanced": true,
+      "solver": "liblinear",
+      "imputation": "train_mean"
+    },
+    "quality": "half direct probability plus half noisy-OR of criteria",
+    "selection": "Development OOF recipe selection on two splits; thresholds on inner train only",
+    "independent_test": false,
+    "versions": {
+      "numpy": "2.2.6",
+      "scikit-learn": "1.7.2",
+      "scipy": "1.16.2",
+      "opencv-python-headless": "4.12.0.88"
+    },
+    "code_sha256": {
+      "src/solution/geometry.py": "36ffd3bfa0b6f853654a18eeb76e980fe8df0f25ae6c4df598fe0bae7c750ef7",
+      "src/solution/model.py": "036977dc55e6581ec44acd7c4c981b18863b48d836d8ed3cdb4269b0ead41bf2",
+      "src/utils/train_geometry.py": "0182b1d75f30a7feca5c4322c978541b8d9f8b28d9837e06a2a41e26b031df57"
+    }
+  },
+  "metrics": {
+    "primary": {
+      "quality_f1": 0.6756756756756757,
+      "quality_auc": 0.8211707470182047,
+      "macro_f1": 0.6037566137566137
+    },
+    "secondary": {
+      "quality_f1": 0.6206896551724138,
+      "quality_auc": 0.7797394852479598,
+      "macro_f1": 0.5242424242424242
+    }
+  },
+  "experiments": [
+    {
+      "split": "e5-blend",
+      "weight": 0,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.6134969325153374,
+      "auc": 0.8047708725674828,
+      "macro": 0.45999999999999996,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.125,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.575,
+        "hip_roi": 0.19047619047619047
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6211180124223602,
+      "auc": 0.8136377903327057,
+      "macro": 0.46226214781543484,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.12903225806451613,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.5822784810126582,
+        "hip_roi": 0.19047619047619047
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.25,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.6375,
+      "auc": 0.8047708725674828,
+      "macro": 0.5036900789236719,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.25806451612903225,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.575,
+        "hip_roi": 0.27586206896551724
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.25,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6335403726708074,
+      "auc": 0.8186597614563716,
+      "macro": 0.5025324675324676,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.24242424242424243,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.575,
+        "hip_roi": 0.2857142857142857
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.25,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.6329113924050633,
+      "auc": 0.8047708725674828,
+      "macro": 0.4831444417651315,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.24242424242424243,
+        "spine_objects": 0.6666666666666666,
+        "hip_position": 0.5641025641025641,
+        "hip_roi": 0.27586206896551724
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.25,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.6329113924050633,
+      "auc": 0.8159918392969241,
+      "macro": 0.4831444417651315,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.24242424242424243,
+        "spine_objects": 0.6666666666666666,
+        "hip_position": 0.5641025641025641,
+        "hip_roi": 0.27586206896551724
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.5,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.6666666666666666,
+      "auc": 0.8047708725674828,
+      "macro": 0.5426119622782011,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.2727272727272727,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.6097560975609756,
+        "hip_roi": 0.42105263157894735
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.5,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6357615894039735,
+      "auc": 0.8214846202134338,
+      "macro": 0.5306607427660059,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.2727272727272727,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.55,
+        "hip_roi": 0.42105263157894735
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.5,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.6143790849673203,
+      "auc": 0.8047708725674828,
+      "macro": 0.46124682335208644,
+      "types": {
+        "spine_position": 0.3076923076923077,
+        "spine_axis": 0.2727272727272727,
+        "spine_objects": 0.7333333333333333,
+        "hip_position": 0.5714285714285714,
+        "hip_roi": 0.42105263157894735
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 0.5,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.5960264900662252,
+      "auc": 0.8147363465160076,
+      "macro": 0.4682205513784462,
+      "types": {
+        "spine_position": 0.42857142857142855,
+        "spine_axis": 0.21052631578947367,
+        "spine_objects": 0.7333333333333333,
+        "hip_position": 0.5476190476190477,
+        "hip_roi": 0.42105263157894735
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 1.0,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.6754966887417219,
+      "auc": 0.8047708725674828,
+      "macro": 0.600779058340034,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.38461538461538464,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.6097560975609756,
+        "hip_roi": 0.6
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 1.0,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6756756756756757,
+      "auc": 0.8211707470182047,
+      "macro": 0.6037566137566137,
+      "types": {
+        "spine_position": 0.6666666666666666,
+        "spine_axis": 0.4166666666666667,
+        "spine_objects": 0.7428571428571429,
+        "hip_position": 0.5925925925925926,
+        "hip_roi": 0.6
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 1.0,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.5352112676056338,
+      "auc": 0.8047708725674828,
+      "macro": 0.4109571365444101,
+      "types": {
+        "spine_position": 0.12903225806451613,
+        "spine_axis": 0.3,
+        "spine_objects": 0.56,
+        "hip_position": 0.4657534246575342,
+        "hip_roi": 0.6
+      }
+    },
+    {
+      "split": "e5-blend",
+      "weight": 1.0,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.527027027027027,
+      "auc": 0.7988072818581292,
+      "macro": 0.4021287959352476,
+      "types": {
+        "spine_position": 0.12903225806451613,
+        "spine_axis": 0.2857142857142857,
+        "spine_objects": 0.56,
+        "hip_position": 0.4358974358974359,
+        "hip_roi": 0.6
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.5771812080536913,
+      "auc": 0.7543157564344005,
+      "macro": 0.4205171299288947,
+      "types": {
+        "spine_position": 0.6,
+        "spine_axis": 0.15384615384615385,
+        "spine_objects": 0.7058823529411765,
+        "hip_position": 0.5,
+        "hip_roi": 0.14285714285714285
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.5866666666666667,
+      "auc": 0.7621625863151287,
+      "macro": 0.44597167538344007,
+      "types": {
+        "spine_position": 0.7272727272727273,
+        "spine_axis": 0.15384615384615385,
+        "spine_objects": 0.7058823529411765,
+        "hip_position": 0.5,
+        "hip_roi": 0.14285714285714285
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.25,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.5753424657534246,
+      "auc": 0.7543157564344005,
+      "macro": 0.4269930069930069,
+      "types": {
+        "spine_position": 0.6,
+        "spine_axis": 0.0,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.5,
+        "hip_roi": 0.3076923076923077
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.25,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.5866666666666667,
+      "auc": 0.7670276208411803,
+      "macro": 0.468604288894144,
+      "types": {
+        "spine_position": 0.7272727272727273,
+        "spine_axis": 0.08695652173913043,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.49382716049382713,
+        "hip_roi": 0.3076923076923077
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.25,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.5467625899280576,
+      "auc": 0.7543157564344005,
+      "macro": 0.4592096944151739,
+      "types": {
+        "spine_position": 0.8,
+        "spine_axis": 0.0,
+        "spine_objects": 0.75,
+        "hip_position": 0.4383561643835616,
+        "hip_roi": 0.3076923076923077
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.25,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.5467625899280576,
+      "auc": 0.7653797865662273,
+      "macro": 0.4592096944151739,
+      "types": {
+        "spine_position": 0.8,
+        "spine_axis": 0.0,
+        "spine_objects": 0.75,
+        "hip_position": 0.4383561643835616,
+        "hip_roi": 0.3076923076923077
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.5,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.5874125874125874,
+      "auc": 0.7543157564344005,
+      "macro": 0.4581818181818182,
+      "types": {
+        "spine_position": 0.6,
+        "spine_axis": 0.1,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.5,
+        "hip_roi": 0.36363636363636365
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.5,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6133333333333333,
+      "auc": 0.7726773383553043,
+      "macro": 0.4996237916091243,
+      "types": {
+        "spine_position": 0.7272727272727273,
+        "spine_axis": 0.17391304347826086,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.5060240963855421,
+        "hip_roi": 0.36363636363636365
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.5,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.55,
+      "auc": 0.7543157564344005,
+      "macro": 0.4841048237476809,
+      "types": {
+        "spine_position": 0.8,
+        "spine_axis": 0.1,
+        "spine_objects": 0.6875,
+        "hip_position": 0.46938775510204084,
+        "hip_roi": 0.36363636363636365
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 0.5,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.5838509316770186,
+      "auc": 0.765615191462649,
+      "macro": 0.5170693779904306,
+      "types": {
+        "spine_position": 0.8,
+        "spine_axis": 0.25,
+        "spine_objects": 0.6875,
+        "hip_position": 0.4842105263157895,
+        "hip_roi": 0.36363636363636365
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 1.0,
+      "mode": "rare",
+      "quality": "direct",
+      "f1": 0.5986394557823129,
+      "auc": 0.7543157564344005,
+      "macro": 0.5002371541501975,
+      "types": {
+        "spine_position": 0.6,
+        "spine_axis": 0.17391304347826086,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.5,
+        "hip_roi": 0.5
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 1.0,
+      "mode": "rare",
+      "quality": "mixed",
+      "f1": 0.6206896551724138,
+      "auc": 0.7797394852479598,
+      "macro": 0.5242424242424242,
+      "types": {
+        "spine_position": 0.7272727272727273,
+        "spine_axis": 0.16666666666666666,
+        "spine_objects": 0.7272727272727273,
+        "hip_position": 0.5,
+        "hip_roi": 0.5
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 1.0,
+      "mode": "all",
+      "quality": "direct",
+      "f1": 0.5373134328358209,
+      "auc": 0.7543157564344005,
+      "macro": 0.38669249092811503,
+      "types": {
+        "spine_position": 0.2222222222222222,
+        "spine_axis": 0.17391304347826086,
+        "spine_objects": 0.45161290322580644,
+        "hip_position": 0.5142857142857142,
+        "hip_roi": 0.5714285714285714
+      }
+    },
+    {
+      "split": "e5-blend-split137",
+      "weight": 1.0,
+      "mode": "all",
+      "quality": "mixed",
+      "f1": 0.5419354838709678,
+      "auc": 0.7587884494664155,
+      "macro": 0.38899616858237546,
+      "types": {
+        "spine_position": 0.2222222222222222,
+        "spine_axis": 0.24,
+        "spine_objects": 0.5,
+        "hip_position": 0.4827586206896552,
+        "hip_roi": 0.5
+      }
+    }
+  ],
+  "development_selection": true,
+  "independent_test": false,
+  "geometry_port_matches_original_images": 249,
+  "weights_unchanged": true,
+  "artifacts": {
+    "unified-v1/manifest.csv": "9049db1fc0190879add3a5ac81d15639d50837b3aabc87503221275f6c4f0315",
+    "unified-v1/recipe.json": "5450b8d63f1734d8e870816b11edd7e9d7dbde1b3ac2c94e686b8abfd807cd9d",
+    "unified-v1/features.npz": "9a9ead5b465983a967b56e26c1b79aa4d33fad22e753255c0b78070fe09a30ed",
+    "unified-v1/oof.csv": "33b8c8e5200e7123cb71ad22a83d5e62d7afe873bde5a0c54b10017b3b830ccb",
+    "unified-v1/metrics.json": "7f8947de37bf326443279d6521382463a0bedadee9f6a0d9a7559d09924e5fde",
+    "unified-v1-split137/manifest.csv": "5699e1601634827c442a8542455f2a771f0d19bf4c2383fb15bc1a7de23cd550",
+    "unified-v1-split137/recipe.json": "30132dceab02e5a354a10a9d7b950f0b51fe688366cf40b6fa9fad2550b5b2d6",
+    "unified-v1-split137/features.npz": "9a9ead5b465983a967b56e26c1b79aa4d33fad22e753255c0b78070fe09a30ed",
+    "unified-v1-split137/oof.csv": "6c66cc7381174aad36bc24b1930d55a6818b5e5604728f8d39ebafe36e4f962b",
+    "unified-v1-split137/metrics.json": "8db4714beaeffcaa91f14343a63f5413d48cf6f4b5500b9e49c3bcb080a6c5fb"
+  },
+  "macro_f1_four_names": {
+    "primary": 0.5898809523809524,
+    "secondary": 0.48066875653082547
+  },
+  "runtime_checks": {
+    "geometry_regressions": 3,
+    "legacy_tests_passed": 15,
+    "legacy_integration_skipped": "Requires legacy encoders; not part of shipped runtime",
+    "web_tests": 9,
+    "browser_real_images": 3,
+    "browser_failure_rows": 1,
+    "browser_widths": [
+      375,
+      1440
+    ],
+    "offline_container": {
+      "health": {
+        "status": "ok",
+        "model": "Radiance",
+        "version": "1.0",
+        "recipe": "radiance-geometry-v1",
+        "device": "cpu",
+        "backbones": [
+          "dinov3-large",
+          "medimageinsight"
+        ]
+      },
+      "images": 3,
+      "mixed_rows": 5,
+      "offline": true,
+      "readonly": true,
+      "nonroot": true,
+      "seconds": 141.78601594000003,
+      "checks": "HTTP, order, duplicates, partial failure, invalid ZIP/path/content type, isolated model",
+      "image": "radiance:1.0",
+      "image_id": "sha256:73b71c2646f157e9a55f6b443751f7f177c13cea5f89a1b45e93e1650fc31b07",
+      "preparation_checks": true
+    },
+    "raw_pixel_validation": {
+      "source": "raw DICOM through Model.predict",
+      "device": "cpu",
+      "probability_atol": 0.0002,
+      "cached_features_used": false,
+      "final_all_data_model_used": false,
+      "folds": [
+        {
+          "fold": 0,
+          "images": 82,
+          "all_decisions_match": true,
+          "max_probability_error": 5.074251190317902e-05
+        },
+        {
+          "fold": 1,
+          "images": 87,
+          "all_decisions_match": true,
+          "max_probability_error": 6.674942590811916e-05
+        },
+        {
+          "fold": 2,
+          "images": 80,
+          "all_decisions_match": true,
+          "max_probability_error": 6.192678100014337e-05
+        }
+      ],
+      "quality_f1": 0.6756756756756757,
+      "quality_auc": 0.8211707470182047,
+      "reference_auc": 0.8211707470182047
+    },
+    "cpu_host": "Apple M4 Pro, native macOS ARM64, torch 2.8.0, 2 CPU threads",
+    "historical_refit_audit": {
+      "completed": false,
+      "platform": "macOS ARM64",
+      "max_observed_refit_difference": 1.85796819e-06,
+      "original_default_tolerance": 1e-10,
+      "saved_parent_heads_changed": false,
+      "note": "Cross-platform refit diagnostic; full historical audit not claimed. All 249 new saved-fold pixel decisions and F1/AUC reproduced."
+    },
+    "full_dicom_run": {
+      "images": 502,
+      "success": 502,
+      "seconds": 1102.4187245839857,
+      "cold_load_seconds": 10.451422459009336,
+      "max_study_seconds": 67.90466549998382,
+      "device": "cpu",
+      "checks": "MONOCHROME1, save/load, order, singleton, duplicate, partial failure, ZIP/API, prostheses"
+    },
+    "timing_note": "Native Apple M4 Pro, 2 CPU threads, concurrent validation/build workloads; not an isolated benchmark.",
+    "builds": {
+      "cpu": "sha256:73b71c2646f157e9a55f6b443751f7f177c13cea5f89a1b45e93e1650fc31b07",
+      "cuda": "sha256:5376b5340acb72724de0cceacf4213741404323ec88fe66bf00d05f26c9b3eeb",
+      "web": "radiance-web:1.0",
+      "dependencies_checked": true,
+      "model_hashes_verified": true,
+      "gpu_inference_tested": false
+    }
+  }
+}

@@ -236,12 +236,17 @@ class Model:
     def load(cls, path, device="cpu"):
         path = Path(path)
         payload = json.loads((path / "model.json").read_text())
-        if payload["schema"] == 2 and payload.get("backbone") == "blend":
+        if payload["schema"] in (2, 3) and payload.get("backbone") == "blend":
             if payload["aggregation"] != "mean_probability":
                 raise ValueError("Unsupported blend")
             members = [cls.load(path / f"member_{i}", device) for i in range(2)]
-            model = Blend(members, payload.pop("heads"), payload["quality_gate"])
-            if payload["dimensions"] != model.metadata["dimensions"] or payload["targets"] != C.TARGETS:
+            heads = payload.pop("heads")
+            model = (GeometryBlend(members, heads, payload["geometry_heads"])
+                     if payload["schema"] == 3 else Blend(members, heads, payload["quality_gate"]))
+            if (payload["dimensions"] != model.metadata["dimensions"] or payload["targets"] != C.TARGETS
+                    or (payload["schema"] == 3 and
+                        (payload.get('geometry_columns') != model.metadata['geometry_columns']
+                         or not payload['quality_gate']))):
                 raise ValueError("Incompatible blend metadata")
             model.metadata = payload
             return model
@@ -304,3 +309,45 @@ class Blend(Model):
             member.save(path / f"member_{i}")
         (path / "model.json").write_text(json.dumps(dict(self.metadata, heads=self.heads),
                                                    ensure_ascii=False, indent=2, allow_nan=False) + "\n")
+
+
+class GeometryBlend(Blend):
+    """Radiance plus geometry for axis/field; one frozen per-image decision path."""
+
+    def __init__(self, members, heads, geometry_heads):
+        from .geometry import COLUMNS, TASK_COLUMNS
+
+        super().__init__(members, heads)
+        if set(geometry_heads) != set(TASK_COLUMNS):
+            raise ValueError("Incomplete geometry heads")
+        for key, indices in TASK_COLUMNS.items():
+            h = geometry_heads[key]
+            if (len(h['coef']) != len(indices) or len(h['impute']) != len(indices)
+                    or not np.isfinite([*h['coef'], *h['impute'], h['intercept']]).all()):
+                raise ValueError("Invalid geometry head")
+        self.metadata.update(schema=3, recipe="radiance-geometry-v1", geometry_heads=geometry_heads,
+                             geometry_columns=COLUMNS, dimensions=self.metadata['dimensions'] + len(COLUMNS))
+
+    def encode(self, ds):
+        from .dicom import pixels
+        from .geometry import features
+
+        x = super().encode(ds)
+        _, scores = super().classify(x[None])
+        return np.concatenate([x, features(pixels(ds), scores['region'][0] >= .5)])
+
+    def classify(self, x):
+        from .geometry import COLUMNS, TASK_COLUMNS
+
+        if x.ndim != 2 or x.shape[1] != self.metadata['dimensions']:
+            raise ValueError("Incompatible geometry feature dimensions")
+        _, scores = super().classify(x[:, :-len(COLUMNS)])
+        geom = x[:, -len(COLUMNS):]
+        for key, indices in TASK_COLUMNS.items():
+            head = self.metadata['geometry_heads'][key]
+            values = geom[:, indices]
+            values = np.where(np.isfinite(values), values, head['impute'])
+            scores[key] = probability(values, head)
+        for quality, types in [('spine_quality', C.TARGETS[:3]), ('hip_quality', C.TARGETS[3:])]:
+            scores[quality] = .5 * scores[quality] + .5 * (1 - np.prod([1 - scores[t] for t in types], axis=0))
+        return self.decide(scores)

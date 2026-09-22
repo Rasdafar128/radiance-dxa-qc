@@ -1,7 +1,7 @@
 name: radiance
 services:
   api:
-    image: radiance:cpu
+    image: radiance:1.0-cpu
     platform: linux/amd64
     build:
       context: ..

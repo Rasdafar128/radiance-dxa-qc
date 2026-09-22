@@ -116,7 +116,7 @@ docker compose -f docker/compose.yaml down
 ./docker/run.sh cuda
 ```
 
-Скрипт проверяет веса, собирает образ `radiance:cpu` / `cuda`, затем запускает
+Скрипт проверяет веса, собирает образ `radiance:1.0-cpu` / `cuda`, затем запускает
 API от UID 10001 с файловой системой только для чтения и временным `/tmp`.
 Порт доступен только на `127.0.0.1:8080`. Один worker: каждый процесс загрузил бы
 отдельную копию двух энкодеров. Холодный старт занимает десятки секунд;
@@ -125,9 +125,9 @@ API от UID 10001 с файловой системой только для чт
 Собрать без запуска:
 
 ```bash
-docker build --platform linux/amd64 -f docker/Dockerfile -t radiance:cpu .
+docker build --platform linux/amd64 -f docker/Dockerfile -t radiance:1.0-cpu .
 docker build --platform linux/amd64 --build-arg TORCH_INDEX=cu126 \
-  -f docker/Dockerfile -t radiance:cuda .
+  -f docker/Dockerfile -t radiance:1.0-cuda .
 ```
 
 В образ входят `src/solution`, общая конфигурация, модель, лицензии и зависимости.
@@ -164,7 +164,7 @@ CLI имеет `--model`, `--device`, `--output`; принимает файл, �
 ## Автономная проверка
 
 ```bash
-python3 -m src.utils.check_delivery --image radiance:cpu --input data/test
+python3 -m src.utils.check_delivery --image radiance:1.0-cpu --input data/test
 ```
 
 Проверка стартует новый контейнер с `--network none`, read-only root и пустым

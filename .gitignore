@@ -34,3 +34,7 @@ __pycache__/
 .impeccable/config.local.json
 .playwright-cli/
 .env
+
+# Локальные файлы macOS и результаты просмотра
+.DS_Store
+outputs/

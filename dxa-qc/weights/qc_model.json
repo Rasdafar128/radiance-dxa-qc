@@ -1,0 +1,145 @@
+{
+  "thresholds": {
+    "spine": {
+      "ukl": 0.5502,
+      "axis": 0.1936,
+      "art": 0.4144,
+      "calib": [
+        0.9498398276399396,
+        -0.710202544704231
+      ],
+      "any": 0.4068
+    },
+    "hip": {
+      "rot": 0.1976,
+      "roi": 0.6241,
+      "calib": [
+        0.6025122083021384,
+        -0.32148947683623835
+      ],
+      "any": 0.2399
+    }
+  },
+  "meta": {
+    "version": "0.1.0",
+    "trained_at": "2026-09-18T17:30:24.321907+00:00",
+    "reps": 10,
+    "spec": {
+      "ukl": [
+        [
+          "geom",
+          [
+            "crest_levels",
+            "above_crest_vertebrae",
+            "bottom_lat_frac",
+            "crest_h_min"
+          ],
+          1.0
+        ],
+        [
+          "emb",
+          "dinov3_l",
+          0.03
+        ],
+        [
+          "emb",
+          "mii",
+          0.03
+        ]
+      ],
+      "axis": [
+        [
+          "geom",
+          [
+            "angle_deg",
+            "angle_end_deg"
+          ],
+          1.0
+        ],
+        [
+          "emb",
+          "dinov2_b",
+          0.03
+        ]
+      ],
+      "art": [
+        [
+          "geom",
+          [
+            "tophat_top_p99",
+            "tophat_p999",
+            "sat_max_blob"
+          ],
+          1.0
+        ],
+        [
+          "emb",
+          "dinov3_l",
+          0.03
+        ],
+        [
+          "emb",
+          "mii",
+          0.03
+        ]
+      ],
+      "rot": [
+        [
+          "emb",
+          "dinov3_l",
+          0.03
+        ]
+      ],
+      "roi": [
+        [
+          "geom",
+          [
+            "h_px",
+            "lat_margin_mm",
+            "top_margin_mm",
+            "below_lt_mm",
+            "ok"
+          ],
+          1.0
+        ],
+        [
+          "emb",
+          "rad_dino",
+          0.03
+        ]
+      ]
+    },
+    "context_beta": {
+      "rot": 0.5,
+      "roi": 0.0
+    },
+    "encoders": [
+      "dinov2_b",
+      "rad_dino",
+      "dinov3_l",
+      "mii"
+    ],
+    "any_spec": {
+      "spine": [
+        [
+          "emb",
+          "dinov3_l",
+          0.03
+        ]
+      ],
+      "hip": [
+        [
+          "emb",
+          "dinov3_l",
+          0.03
+        ]
+      ]
+    },
+    "any_blend": 0.0,
+    "cv": {
+      "macro_f1": 0.6062409812409812,
+      "pooled_roc_auc": 0.8420765877957659,
+      "pooled_f1": 0.6625766871165644
+    }
+  }
+}

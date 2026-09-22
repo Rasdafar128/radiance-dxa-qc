@@ -1,6 +1,6 @@
 {
-  "schema": 2,
-  "recipe": "frozen-probability-mean-v1",
+  "schema": 3,
+  "recipe": "radiance-geometry-v1",
   "backbone": "blend",
   "aggregation": "mean_probability",
   "quality_gate": true,
@@ -11,7 +11,7 @@
     "hip_position",
     "hip_roi"
   ],
-  "dimensions": 2048,
+  "dimensions": 2055,
   "preprocess": {
     "size": 448,
     "resize": "bicubic_letterbox",
@@ -65,6 +65,55 @@
       "padding": 0
     }
   ],
+  "geometry_heads": {
+    "spine_axis": {
+      "coef": [
+        0.6927901062849475,
+        -0.07979243753963
+      ],
+      "intercept": -1.9918004551651927,
+      "threshold": 0.5,
+      "C": 1.0,
+      "balanced": true,
+      "solver": "liblinear",
+      "impute": [
+        2.446647498153158,
+        2.469917293693856
+      ]
+    },
+    "hip_roi": {
+      "coef": [
+        -0.04269172423046646,
+        -0.009039292885141931,
+        -0.0767310933649603,
+        0.020259453749047862,
+        0.0
+      ],
+      "intercept": 15.357652523546822,
+      "threshold": 0.5,
+      "C": 1.0,
+      "balanced": true,
+      "solver": "liblinear",
+      "impute": [
+        273.6666666666667,
+        70.51333333333334,
+        79.84,
+        34.9375,
+        1.0
+      ]
+    }
+  },
+  "geometry_columns": [
+    "angle",
+    "angle_end",
+    "height",
+    "lateral",
+    "top",
+    "below_lt",
+    "hip_found"
+  ],
+  "model_name": "Radiance",
+  "version": "1.0",
   "training_partition": "all_labeled",
   "heads": {
     "region": {
@@ -74,7 +123,7 @@
       "threshold": 0.75
     },
     "spine_axis": {
-      "threshold": 0.75
+      "threshold": 0.65
     },
     "spine_objects": {
       "threshold": 0.75
@@ -83,15 +132,16 @@
       "threshold": 0.4
     },
     "hip_roi": {
-      "threshold": 0.65
+      "threshold": 0.7
     },
     "spine_quality": {
-      "threshold": 0.3
+      "threshold": 0.55
     },
     "hip_quality": {
-      "threshold": 0.35
+      "threshold": 0.6
     }
   },
-  "name": "Radiance",
-  "version": "1.0"
+  "model_version": "1.0",
+  "provenance": "research/results/unification.json",
+  "name": "Radiance"
 }

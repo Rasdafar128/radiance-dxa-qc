@@ -25,7 +25,8 @@ CSV contract, with clear handling of failures and model limitations.
 ## Positioning
 
 The fixed Radiance ensemble combines DINOv3 Large and MedImageInsight to identify the
-anatomical region and five acquisition-quality violations. This is a research
+anatomical region and five acquisition-quality violations. Image-space geometry
+from dxa-qc supplies the spine-axis and hip-field heads in version 1.0. This is a research
 prototype; it does not diagnose osteoporosis or replace expert review.
 
 ## Operating Context

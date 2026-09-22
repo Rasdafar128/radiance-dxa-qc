@@ -1,6 +1,6 @@
 services:
   api:
-    image: radiance:cuda
+    image: radiance:1.0-cuda
     build:
       args:
         TORCH_INDEX: cu126

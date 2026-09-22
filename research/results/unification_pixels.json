@@ -1,0 +1,30 @@
+{
+  "source": "raw DICOM through Model.predict",
+  "device": "cpu",
+  "probability_atol": 0.0002,
+  "cached_features_used": false,
+  "final_all_data_model_used": false,
+  "folds": [
+    {
+      "fold": 0,
+      "images": 82,
+      "all_decisions_match": true,
+      "max_probability_error": 5.074251190317902e-05
+    },
+    {
+      "fold": 1,
+      "images": 87,
+      "all_decisions_match": true,
+      "max_probability_error": 6.674942590811916e-05
+    },
+    {
+      "fold": 2,
+      "images": 80,
+      "all_decisions_match": true,
+      "max_probability_error": 6.192678100014337e-05
+    }
+  ],
+  "quality_f1": 0.6756756756756757,
+  "quality_auc": 0.8211707470182047,
+  "reference_auc": 0.8211707470182047
+}
