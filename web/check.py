@@ -122,6 +122,25 @@ class GatewayCheck(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.uploads, [b"zip-bytes"])
 
+    def test_retry_selects_duplicate_by_position_and_rejects_invalid_index(self):
+        source = io.BytesIO()
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("folder/", b"")
+            archive.writestr("folder/scan.dcm", b"first")
+            with self.assertWarns(UserWarning):
+                archive.writestr("folder/scan.dcm", b"second")
+        headers = {"Content-Type": "application/zip"}
+        response = self.client.post("/api/analyze?image_index=1", content=source.getvalue(), headers=headers)
+        self.assertEqual(response.status_code, 200)
+        with zipfile.ZipFile(io.BytesIO(self.uploads[0])) as archive:
+            self.assertEqual(archive.namelist(), ["folder/scan.dcm"])
+            self.assertEqual(archive.read("folder/scan.dcm"), b"second")
+        for index, status in [(2, 400), (-1, 422)]:
+            self.assertEqual(self.client.post(f"/api/analyze?image_index={index}",
+                                             content=source.getvalue(), headers=headers).status_code, status)
+        self.assertEqual(len(self.uploads), 1)
+        self.assertFalse(app.state.lock.locked())
+
     def test_busy_gateway(self):
         self.client.portal.call(app.state.lock.acquire)
         try:

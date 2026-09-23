@@ -149,3 +149,20 @@ separate verdict in `.impeccable/review/viewer-verdict.md` marks all three fixes
 resolved (`ship`); this covers those fixes only, not a whole-surface or clinical
 approval. Evidence scope and inherited documentation drift are recorded in
 `.impeccable/review/viewer-documentation.md`.
+
+
+## Approved workspace iteration · 2026-09-22
+
+User approved the source-grounded plan in `artifacts/WEB_DIRECTION.md` and requested
+implementation. This supersedes the earlier viewer-first, list-below composition.
+The existing visual world and code-first authority remain.
+
+Implemented: multiple DICOM selection, source-stable study grouping and thumbnails,
+three-column desktop review, finding-first mobile layout, specification-based criterion
+help, session review marks, next unreviewed finding, isolated per-file retry and native
+print report. No model/prediction changes or simulated localization. The synthetic
+interface example remains labeled and contains no clinical image.
+
+Current contract and use guide: `docs/WEB_WORKSPACE.md`; current layout: DESIGN.md.
+Review evidence is local under `artifacts/workspace-*` and includes medical images,
+so it must not be copied to the public site or Git.

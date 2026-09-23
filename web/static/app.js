@@ -1,22 +1,22 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
-let file = null,
-  rows = [],
-  previews = [],
-  csv = "",
-  selected = 0,
-  filter = "all",
-  demo = false,
-  busy = false;
+let files = [], rows = [], previews = [], sources = [], csv = "", selected = 0,
+  filter = "all", demo = false, busy = false, completedAt = null;
+const reviewed = new Set();
 const spine = "Поясничный отдел позвоночника";
 const hip = "Проксимальный отдел бедра";
+const columns = ["path_to_study", "study_uid", "image_uid", "anatomical_region", "quality_class",
+  "quality_prob", "violation_type", "processing_status", "time_of_processing"];
 const criteria = {
   [spine]: [
-    "Некорректная укладка",
-    "Не выравнена ось позвоночника",
-    "Присутствуют посторонние предметы",
+    ["Некорректная укладка", "Укладка", "Проверьте полноту кадра: половина тела Th12 сверху и верхние края подвздошных костей снизу."],
+    ["Не выравнена ось позвоночника", "Ось позвоночника", "Оцените ось по центрам тел позвонков относительно вертикали кадра. По ТЗ допустим наклон до 5°. Изгиб позвоночника сам по себе не означает ошибку укладки."],
+    ["Присутствуют посторонние предметы", "Посторонние предметы", "Осмотрите полный кадр на металлические предметы и наложения одежды. Модель отмечает тип нарушения, но не определяет его положение."],
   ],
-  [hip]: ["Некорректная укладка", "Некорректная область интереса"],
+  [hip]: [
+    ["Некорректная укладка", "Укладка", "Проверьте видимость большого вертела, шейки бедра и седалищной кости. Оцените ротацию по контуру малого вертела согласно критериям ТЗ."],
+    ["Некорректная область интереса", "Полнота поля", "Проверьте, что исследуемая зона полностью попала в поле сканирования. Эта оценка не подтверждает наличие или точность сохранённого контура ROI."],
+  ],
 };
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -26,36 +26,26 @@ function element(tag, text, className) {
 }
 const failed = (row) => row.processing_status !== "Success";
 const attention = (row) => !failed(row) && Number(row.quality_class) === 1;
-const basename = (name) =>
-  String(name || "Без имени")
-    .split(/[\\/]/)
-    .pop();
-const regionLabel = (row) =>
-  row.anatomical_region === spine
-    ? "Поясничный отдел"
-    : row.anatomical_region === hip
-      ? "Проксимальный отдел бедра"
-      : "Область не определена";
-const statusText = (row) =>
-  failed(row)
-    ? "Не обработан"
-    : attention(row)
-      ? "Есть находки"
-      : "Без находок";
-const statusClass = (row) =>
-  failed(row) ? "failed" : attention(row) ? "warn" : "ok";
+const basename = (name) => String(name || "Без имени").split(/[\\/]/).pop();
+const isZip = (file) => /\.zip$/i.test(file.name) || file.type === "application/zip";
+const regionLabel = (row) => row.anatomical_region === spine ? "Поясничный отдел"
+  : row.anatomical_region === hip ? "Проксимальный отдел бедра" : "Область не определена";
+const statusText = (row) => failed(row) ? "Не обработан" : attention(row) ? "Есть замечания" : "Без замечаний модели";
+const statusClass = (row) => failed(row) ? "failed" : attention(row) ? "warn" : "ok";
+const findings = (row) => String(row.violation_type || "").split(";").map(s => s.trim()).filter(Boolean);
+const mainFinding = (row) => failed(row) ? "Файл не обработан" : attention(row)
+  ? findings(row).join(" · ") : "Модель не отметила нарушений";
 function error(message) {
-  $("error").textContent = message;
-  $("error").hidden = !message;
+  const target = $(rows.length ? "result-error" : "error");
+  target.textContent = message;
+  target.hidden = !message;
 }
 function route() {
   const model = location.hash === "#model";
+  document.body.classList.toggle("review-mode", !model && rows.length > 0);
   $("check-view").hidden = model;
   $("model-view").hidden = !model;
-  for (const [id, active] of [
-    ["nav-check", !model],
-    ["nav-model", model],
-  ]) {
+  for (const [id, active] of [["nav-check", !model], ["nav-model", model]]) {
     $(id).classList.toggle("active", active);
     if (active) $(id).setAttribute("aria-current", "page");
     else $(id).removeAttribute("aria-current");
@@ -63,220 +53,180 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 route();
+let healthSequence = 0;
+function connection(text, online) {
+  $("connection").className = "connection " + (online ? "online" : "offline");
+  $("connection-text").textContent = text;
+  $("connection").title = text;
+}
 async function health() {
+  if (busy) return;
+  const sequence = ++healthSequence;
   try {
-    const response = await fetch("/api/health", {
-      signal: AbortSignal.timeout(7000),
-    });
+    const response = await fetch("/api/health", { signal: AbortSignal.timeout(7000) });
     if (!response.ok) throw new Error();
     const data = await response.json();
-    $("connection").className = "connection online";
-    $("connection-text").textContent = data.busy
-      ? "Модель занята"
-      : "Модель готова";
-    $("connection").title = data.busy
-      ? "Модель обрабатывает другой пакет"
-      : "Соединение с Radiance установлено";
+    if (busy || sequence !== healthSequence) return;
+    connection(data.busy ? "Модель занята" : "Модель готова", true);
   } catch {
-    $("connection").className = "connection offline";
-    $("connection-text").textContent = "Модель недоступна";
-    $("connection").title =
-      "Сервис модели недоступен. Пример интерфейса работает без подключения.";
+    if (!busy && sequence === healthSequence) connection("Модель недоступна", false);
   }
 }
 health();
-function choose(candidate) {
-  if (busy || !candidate) return;
-  if (candidate.size > 256 * 1024 * 1024) {
-    error("Файл больше 256 МиБ. Разделите его на несколько архивов.");
-    return;
+window.addEventListener("focus", health);
+setInterval(() => { if (!document.hidden) health(); }, 30000);
+function choose(candidates) {
+  if (busy || !candidates.length) return;
+  const next = Array.from(candidates);
+  if (next.length > 1000 || next.reduce((sum, f) => sum + f.size, 0) > 256 * 1024**2) {
+    error("Выберите до 1000 файлов общим размером не больше 256 МиБ."); return;
   }
-  if (!candidate.size) {
-    error("Этот файл пуст. Выберите другой файл.");
-    return;
+  if (next.some(f => !f.size)) { error("В выборе есть пустой файл. Уберите его и повторите выбор."); return; }
+  if (next.some(f => !/\.(zip|dcm|dicom)$/i.test(f.name) && !["application/dicom", "application/zip"].includes(f.type))) {
+    error("Выберите DICOM (.dcm, .dicom) или ZIP. DICOM без расширения можно упаковать в ZIP."); return;
   }
-  if (
-    !/\.(zip|dcm|dicom)$/i.test(candidate.name) &&
-    !["application/dicom", "application/zip"].includes(candidate.type)
-  ) {
-    error(
-      "Выберите DICOM (.dcm, .dicom) или ZIP. Файл DICOM без расширения можно упаковать в ZIP.",
-    );
-    return;
-  }
-  file = candidate;
+  if (next.length > 1 && next.some(isZip)) { error("Выберите несколько DICOM или один ZIP отдельно."); return; }
+  files = next;
   error("");
-  $("file-heading").textContent = candidate.name;
-  $("file-description").textContent =
-    `${(candidate.size / 1024 / 1024).toLocaleString("ru-RU", { maximumFractionDigits: 2 })} МиБ · Готов к отправке`;
+  $("file-heading").textContent = next.length === 1 ? next[0].name : `Выбрано файлов: ${next.length}`;
+  $("file-description").textContent = `${(next.reduce((n, f) => n + f.size, 0) / 1024**2).toLocaleString("ru-RU", {maximumFractionDigits: 2})} МиБ · Готово к проверке`;
   $("choose-file").hidden = true;
-  $("analyze").hidden = false;
-  $("clear-file").hidden = false;
+  $("analyze").hidden = $("clear-file").hidden = false;
   $("analyze").focus();
 }
-function clearFile() {
-  file = null;
+function clearFiles() {
+  files = [];
   $("file-input").value = "";
   error("");
-  $("file-heading").textContent = "Перетащите файл сюда";
-  $("file-description").textContent =
-    "Один DICOM или ZIP с несколькими снимками. До 256 МиБ, без пароля.";
+  $("file-heading").textContent = "Перетащите снимки сюда";
+  $("file-description").textContent = "Несколько DICOM или один ZIP с исследованиями. До 256 МиБ суммарно, ZIP без пароля.";
   $("choose-file").hidden = false;
-  $("analyze").hidden = true;
-  $("clear-file").hidden = true;
+  $("analyze").hidden = $("clear-file").hidden = true;
 }
 $("choose-file").addEventListener("click", () => $("file-input").click());
-$("file-input").addEventListener("change", (event) =>
-  choose(event.target.files[0]),
-);
-$("clear-file").addEventListener("click", () => {
-  clearFile();
-  $("choose-file").focus();
-});
+$("file-input").addEventListener("change", event => choose(event.target.files));
+$("clear-file").addEventListener("click", () => { clearFiles(); $("choose-file").focus(); });
 const zone = $("drop-zone");
-for (const type of ["dragenter", "dragover"])
-  zone.addEventListener(type, (event) => {
-    event.preventDefault();
-    if (!busy) zone.classList.add("drag-over");
-  });
-for (const type of ["dragleave", "drop"])
-  zone.addEventListener(type, (event) => {
-    event.preventDefault();
-    zone.classList.remove("drag-over");
-  });
-zone.addEventListener("drop", (event) => {
-  if (busy) return;
-  if (event.dataTransfer.files.length !== 1) {
-    error("Выберите один файл. Несколько DICOM упакуйте в ZIP.");
-    return;
-  }
-  choose(event.dataTransfer.files[0]);
+for (const type of ["dragenter", "dragover"]) zone.addEventListener(type, event => {
+  event.preventDefault(); if (!busy) zone.classList.add("drag-over");
 });
-window.addEventListener("dragover", (event) => event.preventDefault());
-window.addEventListener("drop", (event) => event.preventDefault());
-window.addEventListener("beforeunload", (event) => {
-  if (busy) {
-    event.preventDefault();
-    event.returnValue = "";
-  }
+for (const type of ["dragleave", "drop"]) zone.addEventListener(type, event => {
+  event.preventDefault(); zone.classList.remove("drag-over");
 });
+zone.addEventListener("drop", event => choose(event.dataTransfer.files));
+window.addEventListener("dragover", event => event.preventDefault());
+window.addEventListener("drop", event => event.preventDefault());
+window.addEventListener("beforeunload", event => {
+  if (busy || (rows.length && !demo)) { event.preventDefault(); event.returnValue = ""; }
+});
+let started = 0, timer;
+function tick() {
+  const elapsed = `Прошло ${Math.floor((Date.now() - started) / 1000)} с`;
+  $("elapsed").textContent = elapsed;
+  // Таймер не объявляется скринридеру каждую секунду.
+  $("result-elapsed").textContent = elapsed;
+}
+function progress(text) {
+  $("result-progress-text").textContent = text;
+  $("progress-text").textContent = text;
+  $("file-description").textContent = text;
+  connection("Идёт проверка", true);
+  tick();
+}
 function setBusy(value) {
   busy = value;
+  ++healthSequence;
   $("progress").hidden = !value;
+  $("result-progress").hidden = !value || !rows.length;
   $("upload-workspace").setAttribute("aria-busy", String(value));
-  for (const id of [
-    "choose-file",
-    "analyze",
-    "clear-file",
-    "show-demo",
-    "file-input",
-  ])
+  for (const id of ["choose-file", "analyze", "clear-file", "show-demo", "file-input", "new-upload", "download", "print"])
     $(id).disabled = value;
+  clearInterval(timer);
+  if (value) { started = Date.now(); timer = setInterval(tick, 1000); }
 }
-function request(file) {
+function request(file, imageIndex = null, label = "") {
+  progress(`${label}Передаём файл…`);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/analyze?filename=" + encodeURIComponent(file.name));
-    xhr.setRequestHeader(
-      "Content-Type",
-      /\.zip$/i.test(file.name) || file.type === "application/zip"
-        ? "application/zip"
-        : "application/dicom",
-    );
+    const params = new URLSearchParams({filename: file.name});
+    if (imageIndex !== null) params.set("image_index", imageIndex);
+    xhr.open("POST", "/api/analyze?" + params);
+    xhr.setRequestHeader("Content-Type", isZip(file) ? "application/zip" : "application/dicom");
     xhr.timeout = 625000;
-    xhr.upload.onload = () => {
-      $("progress-text").textContent = "Модель проверяет снимки…";
-    };
+    xhr.upload.onload = () => progress(`${label}Ожидаем результат модели…`);
     xhr.onload = () => {
-      let response;
-      try {
-        response = JSON.parse(xhr.responseText);
-      } catch {
-        reject(
-          new Error(
-            "Сервис вернул неожиданный ответ. Повторите проверку позже.",
-          ),
-        );
-        return;
+      let result;
+      try { result = JSON.parse(xhr.responseText); }
+      catch { reject(new Error("Сервис вернул неожиданный ответ. Повторите проверку.")); return; }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(typeof result.detail === "string" ? result.detail : "Проверка не выполнена.")); return;
       }
-      if (xhr.status >= 200 && xhr.status < 300) resolve(response);
-      else
-        reject(
-          new Error(
-            typeof response.detail === "string"
-              ? response.detail
-              : "Проверка не выполнена. Попробуйте другой файл.",
-          ),
-        );
+      if (!Array.isArray(result.rows) || !result.rows.length || typeof result.csv !== "string"
+          || result.rows.some(r => columns.some(key => !(key in r)))) {
+        reject(new Error("Ответ модели неполный. Повторите проверку.")); return;
+      }
+      resolve(result);
     };
-    xhr.onerror = () =>
-      reject(
-        new Error(
-          "Соединение прервалось. Проверьте сеть и повторите отправку.",
-        ),
-      );
-    xhr.ontimeout = () =>
-      reject(new Error("Время ожидания истекло. Попробуйте меньший пакет."));
+    xhr.onerror = () => reject(new Error("Соединение прервалось. Проверьте сеть и повторите отправку."));
+    xhr.ontimeout = () => reject(new Error("Время ожидания истекло. Попробуйте меньший пакет."));
     xhr.send(file);
   });
 }
+function exportRows() {
+  const quote = value => '"' + String(value ?? "").replaceAll('"', '""') + '"';
+  return columns.join(",") + "\n" + rows.map(row => columns.map(key => quote(row[key])).join(",")).join("\n") + "\n";
+}
 $("analyze").addEventListener("click", async () => {
-  if (!file || busy) return;
+  if (!files.length || busy) return;
   error("");
-  $("progress-text").textContent = "Передаём файл…";
+  rows = []; previews = []; sources = []; reviewed.clear(); demo = false; selected = 0; filter = "all";
   setBusy(true);
   try {
-    const result = await request(file);
-    if (
-      !Array.isArray(result.rows) ||
-      !result.rows.length ||
-      typeof result.csv !== "string"
-    )
-      throw new Error("Ответ модели неполный. Повторите проверку.");
-    rows = result.rows;
-    previews = Array.isArray(result.previews) ? result.previews : [];
-    csv = result.csv;
-    demo = false;
-    showResults();
-  } catch (exception) {
-    error(exception.message);
-  } finally {
-    setBusy(false);
-    health();
+    for (const [index, file] of files.entries()) {
+      try {
+        const result = await request(file, null, files.length > 1 ? `Файл ${index + 1} из ${files.length} · ` : "");
+        for (const [i, row] of result.rows.entries()) {
+          rows.push(row); previews.push(result.previews?.[i] || {});
+          sources.push({file, imageIndex: isZip(file) ? i : null});
+        }
+        csv = files.length === 1 ? result.csv : exportRows();
+      } catch (exception) {
+        if (isZip(file)) throw exception;
+        rows.push({...Object.fromEntries(columns.map(c => [c, ""])), path_to_study: file.name, processing_status: "Failure"});
+        previews.push({message: exception.message}); sources.push({file, imageIndex: null});
+        csv = exportRows();
+      }
+      showResults(false);
+    }
+    completedAt = new Date();
+  } catch (exception) { error(exception.message); }
+  finally {
+    setBusy(false); health();
+    if (rows.length) { render(); $("results-heading").focus({preventScroll: true}); }
   }
 });
-function showResults() {
+function showResults(focus = true) {
   $("check-view").classList.add("has-results");
-  filter = "all";
-  selected = rows.findIndex(attention);
-  if (selected < 0) selected = 0;
+  route();
   $("upload-workspace").hidden = true;
   $("results").hidden = false;
   $("demo-notice").hidden = !demo;
-  $("result-summary").textContent =
-    `Файлов: ${rows.length} · ${rows.filter(attention).length} с находками · ${rows.filter(failed).length} не обработано${demo ? "" : " · Radiance"}`;
-  $("count-all").textContent = rows.length;
-  $("count-attention").textContent = rows.filter(attention).length;
-  $("count-failure").textContent = rows.filter(failed).length;
+  $("result-progress").hidden = !busy;
   render();
-  $("results-heading").focus({ preventScroll: true });
-  $("results").scrollIntoView({ block: "start" });
+  if (focus) $("results-heading").focus({preventScroll: true});
 }
 function openResult(index) {
   selected = index;
   render();
-  $("viewer-title").focus({ preventScroll: true });
-  $("viewer").scrollIntoView({ block: "start" });
+  if (matchMedia("(max-width: 1100px)").matches) $("study-list").open = false;
+  const target = $(matchMedia("(max-width: 800px)").matches ? "mobile-summary" : "inspection-title");
+  target.focus({preventScroll: true});
+  if (matchMedia("(max-width: 800px)").matches) target.scrollIntoView({block: "start"});
 }
 function icon(pathData, viewBox = "0 0 24 24") {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", viewBox);
-  svg.setAttribute("aria-hidden", "true");
-  svg.classList.add("arrow-icon");
-  const path = document.createElementNS(svg.namespaceURI, "path");
-  path.setAttribute("d", pathData);
-  svg.append(path);
-  return svg;
+  svg.setAttribute("viewBox", viewBox); svg.setAttribute("aria-hidden", "true"); svg.classList.add("arrow-icon");
+  const path = document.createElementNS(svg.namespaceURI, "path"); path.setAttribute("d", pathData); svg.append(path); return svg;
 }
 const view = { zoom: 1, x: 0, y: 0, index: -1, source: "", visible: [] };
 const stage = $("viewer-stage");
@@ -346,8 +296,7 @@ function renderViewer(visible) {
 function moveImage(delta) {
   const next = view.visible[view.visible.indexOf(selected) + delta];
   if (next === undefined) return;
-  selected = next;
-  render();
+  openResult(next);
 }
 $("previous-image").addEventListener("click", () => moveImage(-1));
 $("next-image").addEventListener("click", () => moveImage(1));
@@ -413,246 +362,203 @@ scan.addEventListener("error", () => {
   applyView();
 });
 function render() {
-  for (const button of document.querySelectorAll("[data-filter]"))
-    button.setAttribute(
-      "aria-pressed",
-      String(button.dataset.filter === filter),
-    );
-  const visible = rows
-    .map((row, index) => ({ row, index }))
-    .filter(
-      ({ row }) =>
-        filter === "all" ||
-        (filter === "attention" ? attention(row) : failed(row)),
-    )
-    .sort(
-      (a, b) =>
-        (attention(a.row) ? 0 : failed(a.row) ? 1 : 2) -
-        (attention(b.row) ? 0 : failed(b.row) ? 1 : 2),
-    );
-  if (!visible.some(({ index }) => index === selected))
-    selected = visible.length ? visible[0].index : -1;
-  const body = $("result-rows");
-  body.replaceChildren();
-  for (const { row, index } of visible) {
-    const tr = element(
-      "tr",
-      undefined,
-      index === selected ? "result-row selected" : "result-row",
-    );
-    tr.id = "result-row-" + index;
-    tr.addEventListener("click", () => openResult(index));
-    const name = element("td");
-    const button = element("button", basename(row.path_to_study), "file-link");
-    button.setAttribute(
-      "aria-label",
-      `Открыть результат: ${basename(row.path_to_study)}`,
-    );
-    button.setAttribute("aria-pressed", String(index === selected));
-    button.append(element("span", regionLabel(row), "file-subtitle"));
-    name.append(button);
-    tr.append(name);
-    const status = element("td");
-    status.append(
-      element("span", statusText(row), "status " + statusClass(row)),
-    );
-    tr.append(status);
-    tr.append(
-      element(
-        "td",
-        failed(row)
-          ? "—"
-          : Number(row.quality_prob).toLocaleString("ru-RU", {
-              minimumFractionDigits: 3,
-              maximumFractionDigits: 3,
-            }),
-      ),
-    );
-    const arrow = element("td", undefined, "row-arrow");
-    arrow.append(icon("M5 12h14m-6-6 6 6-6 6"));
-    tr.append(arrow);
-    body.append(tr);
+  $("print-report").replaceChildren();
+  for (const button of document.querySelectorAll("[data-filter]")) button.setAttribute("aria-pressed", String(button.dataset.filter === filter));
+  const studyNumbers = new Map();
+  for (const row of rows) if (row.study_uid && !studyNumbers.has(row.study_uid)) studyNumbers.set(row.study_uid, studyNumbers.size + 1);
+  const visible = rows.map((row, index) => ({row, index})).filter(({row}) =>
+    filter === "all" || (filter === "attention" ? attention(row) : failed(row)));
+  if (!visible.some(({index}) => index === selected)) selected = visible.length ? visible[0].index : -1;
+  const groups = new Map();
+  for (const entry of visible) {
+    const key = entry.row.study_uid || "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
   }
+  const body = $("result-rows");
+  const previousScroll = body.scrollTop;
+  body.replaceChildren();
+  for (const [key, group] of groups) {
+    const section = element("section", undefined, "study-group");
+    const heading = element("h3", key ? `Исследование ${studyNumbers.get(key)}` : "Без идентификатора исследования");
+    heading.append(element("span", String(group.length), "group-count"));
+    section.append(heading);
+    for (const {row, index} of group) {
+      const button = element("button", undefined, "study-file" + (selected === index ? " selected" : ""));
+      button.id = "result-row-" + index;
+      button.setAttribute("aria-label", `Открыть результат: ${basename(row.path_to_study)}`);
+      button.setAttribute("aria-pressed", String(selected === index));
+      button.title = row.path_to_study;
+      const thumb = element("span", undefined, "thumbnail");
+      if (!demo && previews[index]?.image?.startsWith("data:image/png;base64,")) {
+        const img = element("img"); img.src = previews[index].image; img.alt = ""; img.loading = "lazy"; thumb.append(img);
+      } else thumb.append(icon("M6 3h8l4 4v14H6zM14 3v5h4"));
+      const copy = element("span", undefined, "study-file-copy");
+      copy.append(element("strong", basename(row.path_to_study)), element("span", regionLabel(row), "file-region"),
+        element("span", statusText(row), "file-state " + statusClass(row)));
+      if (reviewed.has(index)) copy.append(element("span", "Просмотрено", "reviewed-label"));
+      button.append(thumb, copy); button.addEventListener("click", () => openResult(index)); section.append(button);
+    }
+    body.append(section);
+  }
+  body.scrollTop = previousScroll;
   $("empty-filter").hidden = visible.length > 0;
-  renderViewer(visible);
-  renderInspection();
+  $("result-summary").textContent = `${studyNumbers.size ? `Исследований: ${studyNumbers.size} · ` : ""}Файлов: ${rows.length} · С замечаниями: ${rows.filter(attention).length} · Ошибок: ${rows.filter(failed).length}`;
+  $("review-summary").textContent = `Просмотрено ${reviewed.size} из ${rows.filter(r => !failed(r)).length} обработанных снимков${busy ? " · Проверка продолжается" : ""}`;
+  $("count-all").textContent = rows.length;
+  $("count-attention").textContent = rows.filter(attention).length;
+  $("count-failure").textContent = rows.filter(failed).length;
+  $("study-list-summary").textContent = `Снимки · ${rows.length}`;
+  renderViewer(visible); renderInspection(); renderMobileSummary();
+}
+function nextAttention() {
+  const order = [...rows.keys()].slice(selected + 1).concat([...rows.keys()].slice(0, selected + 1));
+  const next = order.find(i => attention(rows[i]) && !reviewed.has(i) && i !== selected);
+  if (next !== undefined) { filter = "all"; openResult(next); }
+}
+function nextButton(id) {
+  const button = element("button", "Следующее с замечанием", "button secondary next-attention");
+  button.id = id;
+  button.disabled = !rows.some((r, i) => i !== selected && attention(r) && !reviewed.has(i));
+  button.addEventListener("click", nextAttention); return button;
+}
+function renderMobileSummary() {
+  const panel = $("mobile-summary"); panel.replaceChildren();
+  const row = rows[selected]; if (!row) return;
+  panel.append(element("p", basename(row.path_to_study) + " · " + regionLabel(row), "mobile-file"),
+    element("h3", mainFinding(row), "mobile-finding " + statusClass(row)));
+  const nav = element("div", undefined, "mobile-navigation");
+  const list = element("button", "Список снимков", "text-button");
+  list.addEventListener("click", () => {
+    $("study-list").open = true;
+    $("study-list-summary").focus({preventScroll: true}); $("study-list").scrollIntoView({block: "start"});
+  });
+  nav.append(list, nextButton("next-attention-mobile")); panel.append(nav);
 }
 function renderInspection() {
-  const panel = $("inspection");
-  panel.replaceChildren();
+  const panel = $("inspection"); panel.replaceChildren();
   const row = rows[selected];
-  const title = element(
-    "h2",
-    row ? "Результат модели" : "Нет выбранного снимка",
-  );
-  title.id = "inspection-title";
-  title.tabIndex = -1;
-  panel.append(title);
-  if (!row) {
-    panel.append(
-      element(
-        "p",
-        "Выберите другую категорию, чтобы просмотреть результаты.",
-        "inspection-note",
-      ),
-    );
-    return;
-  }
-  const back = element(
-    "button",
-    "К списку файлов",
-    "text-button back-to-row",
-  );
-  back.addEventListener("click", () => {
-    const tr = $("result-row-" + selected);
-    tr.querySelector("button").focus({ preventScroll: true });
-    tr.scrollIntoView({ block: "center" });
-  });
-  panel.append(back);
-  panel.append(element("p", regionLabel(row), "inspection-region"));
-  panel.append(element("span", statusText(row), "status " + statusClass(row)));
+  const title = element("h2", row ? (failed(row) ? "Не удалось проверить" : "Результат проверки") : "Нет выбранного снимка");
+  title.id = "inspection-title"; title.tabIndex = -1; panel.append(title);
+  if (!row) { panel.append(element("p", "Выберите другую категорию снимков.", "inspection-note")); return; }
+  panel.append(element("p", regionLabel(row), "inspection-region"), element("span", statusText(row), "status " + statusClass(row)));
   if (failed(row)) {
-    panel.append(
-      element(
-        "p",
-        "Файл не удалось обработать. Проверьте, что это поддерживаемый однокадровый монохромный DICOM, и повторите отправку.",
-        "inspection-note",
-      ),
-    );
+    panel.append(element("p", previews[selected]?.message || "Проверьте, что файл — поддерживаемый однокадровый монохромный DICOM.", "inspection-note"));
+    if (!demo && sources[selected]) {
+      const retry = element("button", busy ? "Идёт проверка…" : "Повторить этот файл", "button secondary");
+      retry.id = "retry-file"; retry.disabled = busy;
+      retry.addEventListener("click", () => retryFile(selected)); panel.append(retry);
+      panel.append(element("p", "Повторится только этот файл. Успешные результаты останутся. Если файл повреждён, загрузите исправную копию новой проверкой.", "inspection-note"));
+    }
   } else {
-    panel.append(element("h3", "Критерии проверки"));
+    const found = findings(row);
     const list = element("ul", undefined, "finding-list");
-    const found = String(row.violation_type || "")
-      .split("; ")
-      .filter(Boolean);
-    for (const label of criteria[row.anatomical_region] || []) {
-      const yes = found.includes(label);
+    const checks = [...(criteria[row.anatomical_region] || [])].sort((a, b) => Number(found.includes(b[0])) - Number(found.includes(a[0])));
+    for (const [key, label, help] of checks) {
+      const yes = found.includes(key);
       const item = element("li", undefined, yes ? "found" : "not-found");
-      const symbol = icon(
-        yes ? "M10 3 18 17H2L10 3Zm0 4v5m0 2v1" : "m4 10 4 4 8-8",
-        "0 0 20 20",
-      );
-      const copy = element("span", label, "finding-copy");
-      copy.append(
-        element("small", yes ? "Отмечено моделью" : "Не отмечено моделью"),
-      );
-      item.append(symbol, copy);
-      list.append(item);
+      item.append(icon(yes ? "M10 3 18 17H2L10 3Zm0 4v5m0 2v1" : "m4 10 4 4 8-8", "0 0 20 20"));
+      const copy = element("div", undefined, "finding-copy");
+      copy.append(element("strong", label), element("small", yes ? "Модель отметила нарушение" : "Не отмечено моделью"));
+      if (yes) {
+        const explanation = element("details", undefined, "criterion-help");
+        explanation.open = true;
+        explanation.append(element("summary", "Что проверить"), element("p", help)); copy.append(explanation);
+      }
+      item.append(copy); list.append(item);
     }
     panel.append(list);
-    panel.append(
-      element(
-        "p",
-        `Оценка нарушения: ${Number(row.quality_prob).toLocaleString("ru-RU", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}. ${attention(row) ? "Проверьте отмеченные критерии на исходном снимке." : "Отсутствие находок не гарантирует отсутствие нарушений."}`,
-        "inspection-note",
-      ),
-    );
+    const mark = element("button", reviewed.has(selected) ? "Просмотрено · отменить" : "Отметить просмотренным", "button " + (reviewed.has(selected) ? "secondary" : "primary"));
+    mark.id = "mark-reviewed"; mark.disabled = busy; mark.setAttribute("aria-pressed", String(reviewed.has(selected)));
+    mark.addEventListener("click", () => {
+      if (reviewed.has(selected)) reviewed.delete(selected); else reviewed.add(selected);
+      render(); $("mark-reviewed").focus({preventScroll: true});
+    });
+    panel.append(mark, nextButton("next-attention"));
+    panel.append(element("p", "Отметка означает только просмотр. Прогноз модели и CSV не меняются. Окончательное решение принимает специалист.", "inspection-note"));
   }
-  const details = element("details", undefined, "metadata");
-  details.append(element("summary", "Данные файла"));
+  const details = element("details", undefined, "metadata"); details.append(element("summary", "Данные файла и оценка"));
   const dl = element("dl");
-  for (const [label, value] of [
-    ["Путь", row.path_to_study],
-    ["Study UID", row.study_uid],
-    ["Image UID", row.image_uid],
-    ["Время обработки, с", row.time_of_processing],
-  ]) {
-    dl.append(element("dt", label), element("dd", value || "—"));
-  }
-  details.append(dl);
+  for (const [label, value] of [["Путь", row.path_to_study], ["Study UID", row.study_uid], ["Image UID", row.image_uid],
+    ["Время обработки, с", row.time_of_processing], ["Оценка нарушения, 0–1", failed(row) ? "" : row.quality_prob], ["Модель", "Radiance 1.0"]])
+    dl.append(element("dt", label), element("dd", String(value ?? "") || "—"));
+  details.append(dl, element("p", "Оценка модели не является вероятностью заболевания. Отсутствие замечаний не гарантирует отсутствие нарушений."));
   panel.append(details);
 }
-for (const button of document.querySelectorAll("[data-filter]"))
-  button.addEventListener("click", () => {
-    filter = button.dataset.filter;
-    render();
-  });
+async function retryFile(index) {
+  if (busy || !sources[index]) return;
+  error(""); setBusy(true); renderInspection();
+  try {
+    const {file, imageIndex} = sources[index];
+    const result = await request(file, imageIndex, "Повтор файла · ");
+    if (result.rows.length !== 1) throw new Error("Ожидался результат одного файла. Остальные результаты сохранены.");
+    rows[index] = result.rows[0]; previews[index] = result.previews?.[0] || {};
+    reviewed.delete(index); csv = exportRows(); completedAt = new Date();
+    if (filter === "failure" && selected === index && !failed(rows[index])) filter = "all";
+  } catch (exception) { error(exception.message); }
+  finally { setBusy(false); health(); render(); $("inspection-title").focus({preventScroll: true}); }
+}
+for (const button of document.querySelectorAll("[data-filter]")) button.addEventListener("click", () => { filter = button.dataset.filter; render(); });
+const compact = matchMedia("(max-width: 1100px)");
+function listLayout() { $("study-list").open = !compact.matches; }
+compact.addEventListener("change", listLayout); listLayout();
 $("new-upload").addEventListener("click", () => {
-  $("check-view").classList.remove("has-results");
-  rows = [];
-  previews = [];
-  view.index = -1;
-  view.source = "";
-  $("dicom-image").removeAttribute("src");
-  csv = "";
-  demo = false;
-  $("results").hidden = true;
-  $("upload-workspace").hidden = false;
-  clearFile();
-  $("choose-file").focus();
+  if (busy) return;
+  $("check-view").classList.remove("has-results"); document.body.classList.remove("review-mode");
+  rows = []; previews = []; sources = []; reviewed.clear(); selected = 0; csv = ""; demo = false; completedAt = null;
+  view.index = -1; view.source = ""; $("dicom-image").removeAttribute("src");
+  $("print-report").replaceChildren(); $("results").hidden = true; $("upload-workspace").hidden = false;
+  $("result-error").hidden = true; clearFiles(); $("choose-file").focus();
 });
 $("download").addEventListener("click", () => {
-  const url = URL.createObjectURL(
-    new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }),
-  );
-  const link = element("a");
-  link.href = url;
-  link.download = demo ? "dxa-synthetic-example.csv" : "dxa-results.csv";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  if (busy) return;
+  const url = URL.createObjectURL(new Blob(["\ufeff", csv], {type: "text/csv;charset=utf-8"}));
+  const link = element("a"); link.href = url; link.download = demo ? "dxa-synthetic-example.csv" : "dxa-results.csv";
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+function formatNumber(value, digits) {
+  return value !== "" && Number.isFinite(Number(value)) ? Number(value).toLocaleString("ru-RU", {maximumFractionDigits: digits}) : "";
+}
+function printReport() {
+  const report = $("print-report"); report.replaceChildren();
+  if (!rows.length) return;
+  report.append(element("h1", "Radiance · Контроль качества DXA"),
+    element("p", `${demo ? "Учебный пример, вымышленные записи · " : ""}Версия 1.0 · ${(completedAt || new Date()).toLocaleString("ru-RU")}`),
+    element("p", $("result-summary").textContent));
+  report.append(element("p", "Результаты модели требуют проверки специалистом. Это не медицинское заключение. Отметка просмотра не подтверждает правильность прогноза."));
+  for (const [index, row] of rows.entries()) {
+    const section = element("article", undefined, "report-image");
+    section.append(element("h2", `${index + 1}. ${basename(row.path_to_study)}`));
+    const layout = element("div", undefined, "report-layout");
+    if (!demo && previews[index]?.image?.startsWith("data:image/png;base64,")) {
+      const img = element("img"); img.src = previews[index].image; img.alt = "Полный кадр DICOM"; layout.append(img);
+    }
+    const text = element("div");
+    text.append(element("h3", mainFinding(row)), element("p", regionLabel(row)));
+    const dl = element("dl");
+    for (const [label, value] of [["Путь", row.path_to_study], ["Study UID", row.study_uid], ["Image UID", row.image_uid],
+      ["Результат", statusText(row)], ["Время, с", formatNumber(row.time_of_processing, 2)], ["Оценка нарушения, 0–1", formatNumber(row.quality_prob, 3)],
+      ["Отметка просмотра", reviewed.has(index) ? "Отмечен в этой сессии" : "Не отмечен"]])
+      dl.append(element("dt", label), element("dd", String(value ?? "") || "—"));
+    text.append(dl); layout.append(text); section.append(layout); report.append(section);
+  }
+}
+window.addEventListener("beforeprint", () => { if (!$("print-report").children.length) printReport(); });
+$("print").addEventListener("click", async () => {
+  if (busy || !rows.length) return;
+  printReport();
+  await Promise.all([...$("print-report").querySelectorAll("img")].map(img => img.decode().catch(() => {})));
+  window.print();
 });
 $("show-demo").addEventListener("click", () => {
-  previews = [];
-  const base = {
-    study_uid: "SYNTHETIC-STUDY",
-    image_uid: "SYNTHETIC-IMAGE",
-    processing_status: "Success",
-    time_of_processing: "",
-  };
+  if (busy) return;
+  previews = []; sources = []; reviewed.clear(); files = []; filter = "all"; selected = 0;
+  const base = {...Object.fromEntries(columns.map(c => [c, ""])), study_uid: "SYNTHETIC-STUDY", processing_status: "Success"};
   rows = [
-    {
-      ...base,
-      path_to_study: "Пример / spine_01.dcm",
-      anatomical_region: spine,
-      quality_class: "1",
-      quality_prob: "0.782",
-      violation_type: "Присутствуют посторонние предметы",
-    },
-    {
-      ...base,
-      path_to_study: "Пример / hip_01.dcm",
-      anatomical_region: hip,
-      quality_class: "0",
-      quality_prob: "0.164",
-      violation_type: "",
-    },
-    {
-      ...base,
-      path_to_study: "Пример / hip_02.dcm",
-      anatomical_region: hip,
-      quality_class: "1",
-      quality_prob: "0.643",
-      violation_type: "Некорректная укладка",
-    },
-    {
-      ...base,
-      path_to_study: "Пример / unreadable.dcm",
-      anatomical_region: "",
-      quality_class: "",
-      quality_prob: "",
-      violation_type: "",
-      processing_status: "Failure",
-    },
+    {...base, image_uid: "SYNTHETIC-1", path_to_study: "Пример / spine_01.dcm", anatomical_region: spine, quality_class: "1", quality_prob: "0.782", violation_type: "Присутствуют посторонние предметы"},
+    {...base, image_uid: "SYNTHETIC-2", path_to_study: "Пример / hip_01.dcm", anatomical_region: hip, quality_class: "0", quality_prob: "0.164"},
+    {...base, image_uid: "SYNTHETIC-3", path_to_study: "Пример / hip_02.dcm", anatomical_region: hip, quality_class: "1", quality_prob: "0.643", violation_type: "Некорректная укладка"},
+    {...base, study_uid: "", path_to_study: "Пример / unreadable.dcm", processing_status: "Failure"},
   ];
-  const columns = [
-    "path_to_study",
-    "study_uid",
-    "image_uid",
-    "anatomical_region",
-    "quality_class",
-    "quality_prob",
-    "violation_type",
-    "processing_status",
-    "time_of_processing",
-  ];
-  const quote = (value) =>
-    '"' + String(value || "").replaceAll('"', '""') + '"';
-  csv =
-    columns.join(",") +
-    "\n" +
-    rows
-      .map((row) => columns.map((key) => quote(row[key])).join(","))
-      .join("\n");
-  demo = true;
-  showResults();
+  csv = exportRows(); demo = true; completedAt = new Date(); showResults();
 });

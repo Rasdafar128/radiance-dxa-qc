@@ -212,3 +212,22 @@ not alternate control shapes.
 - **Don't** present a clean result as a medical conclusion or synthetic rows as real output.
 - **Don't** infer a broader visual approval from the scoped finish verdict; review
   evidence and current surface status are recorded in `.impeccable/surfaces/web.md`.
+
+
+## Current review workspace · 22 September 2026
+
+The approved workspace plan replaces the earlier results composition described above.
+The incumbent colors, Golos typeface and image controls remain. The check-page heading
+is now 28–38px; the model evidence heading retains its original typography.
+
+- Above 1100px: study list (256px), fluid image viewer and inspection rail (292px),
+  with 20px gaps. The list scrolls independently and stays available beside the image.
+- At 801–1100px the study list becomes a native disclosure above viewer and inspection.
+- At 800px and below: selected-file finding first, image second, detailed checks below.
+  The list opens from the finding summary; a closed list is hidden to avoid duplicate controls.
+- Positive criterion names avoid double negatives. Flagged criteria show a concise,
+  expandable specification-based checklist, without simulated localization.
+- Review marks are session-only and visually separate from model results. Print output
+  includes all input rows regardless of the display filter, with full-frame previews.
+- Status uses one current request state and elapsed time; no estimated completion percent.
+  New exports stay disabled while the current operation is unfinished.

@@ -11,7 +11,7 @@ from tempfile import TemporaryFile
 import zipfile
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -20,6 +20,25 @@ from .previews import build_previews
 
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 256 * 1024 * 1024
+
+
+def retry_member(source, target, index):
+    """Повтор одного элемента ZIP по позиции, включая одинаковые имена."""
+    source.seek(0)
+    try:
+        with zipfile.ZipFile(source, metadata_encoding="cp866") as original:
+            members = [m for m in original.infolist() if not m.is_dir()]
+            if index >= len(members) or len(members) > 10000:
+                raise ValueError("Invalid member index")
+            member = members[index]
+            if member.file_size > 32 * 1024**2 or member.flag_bits & 1:
+                raise ValueError("Unsupported member")
+            with original.open(member) as stream, zipfile.ZipFile(target, "w") as archive:
+                with archive.open(member.filename, "w") as output:
+                    shutil.copyfileobj(stream, output)
+        target.seek(0)
+    except (zipfile.BadZipFile, ValueError, RuntimeError, OSError):
+        raise HTTPException(400, "Не удалось повторить этот файл. Выберите исправный DICOM отдельно.") from None
 
 
 @asynccontextmanager
@@ -73,14 +92,14 @@ async def upstream_health():
 
 
 @app.post("/api/analyze")
-async def analyze(request: Request):
+async def analyze(request: Request, image_index: int | None = Query(default=None, ge=0, le=9999)):
     kind = request.headers.get("content-type", "").split(";")[0]
     if kind not in ("application/zip", "application/dicom"):
         raise HTTPException(415, "Выберите DICOM или ZIP с DICOM-файлами.")
     if app.state.lock.locked():
         raise HTTPException(503, "Сейчас обрабатывается другой пакет. Повторите проверку чуть позже.")
     async with app.state.lock:
-        with TemporaryFile() as upload, TemporaryFile() as archive:
+        with TemporaryFile() as upload, TemporaryFile() as archive, TemporaryFile() as retry:
             size = 0
             async for chunk in request.stream():
                 size += len(chunk)
@@ -101,6 +120,10 @@ async def analyze(request: Request):
                 source = archive
             else:
                 source = upload
+
+            if image_index is not None:
+                await run_in_threadpool(retry_member, source, retry, image_index)
+                source = retry
 
             async def chunks():
                 while block := source.read(1024 * 1024):

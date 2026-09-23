@@ -204,3 +204,8 @@ MedImageInsight — [MIT](models/radiance/licenses/MedImageInsight.txt).
 Собственный код — [MIT](LICENSE). Шрифт Golos Text — [SIL OFL](web/static/fonts/OFL.txt).
 Исходные документы организаторов в `context/organizers/` сохраняют права авторов;
 MIT проекта к ним не применяется. История и материалы ведутся в этой же ветке `main`.
+
+Веб-интерфейс: [работа с исследованиями, повтор ошибок, печать и сценарий защиты](docs/WEB_WORKSPACE.md).
+
+Актуальный код веб-интерфейса находится в `main`; версия продукта остаётся 1.0.
+[Замер на RTX 3090](docs/BENCHMARK.md) · [Презентация: PDF, PowerPoint и сценарий](docs/presentation/README.md).

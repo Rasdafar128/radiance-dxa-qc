@@ -38,11 +38,10 @@
         <div class="page-intro">
           <div>
             <h1 id="page-title">
-              Качество снимка.<br /><span>Внимание к деталям.</span>
+              Проверка качества DXA
             </h1>
             <p>
-              Проверка денситометрии: от DICOM<br class="desktop-break" />
-              до понятного отчёта по каждому снимку.
+              Загрузите исследование, проверьте замечания и сохраните отчёт.
             </p>
           </div>
           <div class="intro-note">
@@ -56,7 +55,7 @@
         <div class="workspace" id="upload-workspace">
           <section class="upload-sheet" aria-labelledby="upload-heading">
             <div class="sheet-heading">
-              <h2 id="upload-heading">Новое исследование</h2>
+              <h2 id="upload-heading">Загрузить исследование</h2>
               <span>DICOM / ZIP</span>
             </div>
             <div class="drop-zone" id="drop-zone">
@@ -79,20 +78,21 @@
                   stroke-width="1.6"
                 />
               </svg>
-              <h3 id="file-heading">Перетащите файл сюда</h3>
+              <h3 id="file-heading">Перетащите снимки сюда</h3>
               <p id="file-description">
-                Один DICOM или ZIP с несколькими снимками.<br />До 256 МиБ, без
-                пароля.
+                Несколько DICOM или один ZIP с исследованиями.<br />До 256 МиБ суммарно, ZIP без пароля.
               </p>
               <input
                 id="file-input"
                 type="file"
+                multiple
+                aria-label="DICOM-файлы или ZIP"
                 accept=".dcm,.dicom,.zip,application/dicom,application/zip"
                 hidden
               />
               <div class="upload-actions">
                 <button class="button primary" id="choose-file">
-                  Выбрать файл
+                  Выбрать снимки
                   <svg
                     width="18"
                     height="18"
@@ -112,22 +112,21 @@
                     <path d="m9 5 7 7-7 7" />
                   </svg></button
                 ><button class="button quiet" id="clear-file" hidden>
-                  Убрать файл
+                  Очистить выбор
                 </button>
               </div>
               <div id="progress" class="progress" role="status" hidden>
                 <span class="spinner" aria-hidden="true"></span
                 ><span id="progress-text">Передаём файл…</span
-                ><small>Не закрывайте эту вкладку</small>
+                ><small id="elapsed" role="timer" aria-live="off">Прошло 0 с</small>
               </div>
             </div>
             <div class="error" id="error" role="alert" hidden></div>
             <div class="sheet-foot">
               <span
-                >Файлы обрабатываются временно.<br />История исследований не
-                сохраняется.</span
+                >Файлы и отметки просмотра доступны только в этой сессии.<br />Скачайте отчёт перед закрытием вкладки.</span
               ><button class="text-button" id="show-demo">
-                Посмотреть пример
+                Попробовать интерфейс
                 <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M7 17 17 7M7 7h10v10" />
                 </svg>
@@ -166,11 +165,11 @@
           <div class="results-top">
             <div>
               <h2 id="results-heading" tabindex="-1">Результаты проверки</h2>
-              <p id="result-summary"></p>
+              <p id="result-summary"></p><p id="review-summary" role="status"></p>
             </div>
             <div class="result-actions">
               <button class="button secondary" id="new-upload">
-                Новая проверка</button
+                Новая проверка</button><button class="button secondary" id="print">Печатный отчёт</button
               ><button class="button primary" id="download">
                 Скачать CSV
                 <svg
@@ -187,7 +186,23 @@
           <p id="demo-notice" class="demo-notice" hidden>
             Учебный пример · Все записи вымышлены, это не результаты модели.
           </p>
+          <div id="result-error" class="error" role="alert" hidden></div>
+          <div class="result-progress" id="result-progress" hidden><span id="result-progress-text" role="status"></span><span id="result-elapsed" role="timer" aria-live="off"></span></div>
+          <div class="mobile-summary" id="mobile-summary" tabindex="-1"></div>
           <div class="results-workspace">
+            <details class="study-list" id="study-list" open>
+              <summary id="study-list-summary">Снимки исследования</summary>
+              <div class="list-toolbar">
+                <div class="filters" role="group" aria-label="Фильтр результатов">
+                  <button data-filter="all" aria-pressed="true">Все <span id="count-all">0</span></button>
+                  <button data-filter="attention" aria-pressed="false">Замечания <span id="count-attention">0</span></button>
+                  <button data-filter="failure" aria-pressed="false">Ошибки <span id="count-failure">0</span></button>
+                </div>
+              </div>
+              <div id="result-rows" class="study-groups"></div>
+              <p class="empty-filter" id="empty-filter" hidden>В этой категории нет снимков.</p>
+              <p class="session-note">Отметки просмотра сохраняются до новой проверки или закрытия вкладки.</p>
+            </details>
             <section class="viewer" id="viewer" aria-labelledby="viewer-title">
               <div class="viewer-heading">
                 <div>
@@ -226,7 +241,7 @@
                   <p id="viewer-message">Загрузите DICOM для просмотра.</p>
                 </div>
               </div>
-              <div class="viewer-adjustments">
+              <details class="viewer-settings"><summary>Настройки изображения и управление</summary><div class="viewer-adjustments">
                 <label for="image-brightness">Яркость <output id="brightness-value">100%</output>
                   <input id="image-brightness" type="range" min="50" max="150" step="5" value="100" />
                 </label>
@@ -236,53 +251,13 @@
                 <button class="viewer-button" id="reset-image">Сбросить</button>
               </div>
               <p class="viewer-hint" id="viewer-hint">Увеличьте снимок и перемещайте его мышью или пальцем. С клавиатуры: + / −, стрелки; 0 — сброс.</p>
-              <p class="viewer-disclaimer">Показан полный кадр. Настройки просмотра не меняют результат модели. Локализация нарушений не выполняется.</p>
+              </details><p class="viewer-disclaimer">Полный кадр · Настройки не влияют на проверку · Без локализации нарушений</p>
             </section>
             <aside
               class="inspection"
               id="inspection"
               aria-labelledby="inspection-title"
             ></aside>
-            <div class="result-list">
-              <div class="list-toolbar">
-                <div
-                  class="filters"
-                  role="group"
-                  aria-label="Фильтр результатов"
-                >
-                  <button data-filter="all" aria-pressed="true">
-                    Все <span id="count-all">0</span></button
-                  ><button data-filter="attention" aria-pressed="false">
-                    Находки <span id="count-attention">0</span></button
-                  ><button data-filter="failure" aria-pressed="false">
-                    Ошибки <span id="count-failure">0</span>
-                  </button>
-                </div>
-                <span class="table-hint">Выберите строку</span>
-              </div>
-              <div class="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">Файл / область</th>
-                      <th scope="col">Результат</th>
-                      <th scope="col">Оценка¹</th>
-                      <th scope="col">
-                        <span class="sr-only">Подробнее</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody id="result-rows"></tbody>
-                </table>
-              </div>
-              <p class="empty-filter" id="empty-filter" hidden>
-                В этой категории нет снимков.
-              </p>
-              <p class="table-note">
-                ¹ Оценка нарушения от 0 до 1. Не является вероятностью
-                заболевания.
-              </p>
-            </div>
           </div>
         </section>
         <div class="bottom-note">
@@ -378,14 +353,14 @@
             <h2>Как читать результат</h2>
             <dl class="definitions">
               <div>
-                <dt>Есть находки</dt>
+                <dt>Есть замечания</dt>
                 <dd>
                   Модель отметила один или несколько типов нарушения. Снимок
                   требует просмотра специалистом.
                 </dd>
               </div>
               <div>
-                <dt>Без находок</dt>
+                <dt>Без замечаний модели</dt>
                 <dd>
                   Итоговый ансамбль не отметил нарушений. Это не гарантирует
                   отсутствие ошибок.
@@ -434,6 +409,7 @@
         </div>
       </section>
     </main>
+    <section id="print-report" class="print-report" aria-label="Печатный отчёт"></section>
     <footer class="footer">
       <span>Radiance <span class="footer-sep">/</span> ЛЦТ 2026</span
       ><span>Инструмент проверки качества, не медицинское заключение</span
