@@ -439,23 +439,42 @@ p {
   font-size: 13px;
 }
 .progress {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--blue);
-}
-.progress small {
+  grid-column: 1 / -1;
   width: 100%;
+  margin-bottom: 28px;
+}
+/* Фокус переносится на сообщение, это не интерактивный элемент. */
+.progress:focus { outline: none; }
+.progress-heading {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+#progress-text {
+  font-size: 22px;
+  font-weight: 550;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+.drop-zone .progress-hint {
+  margin: 10px 0 0 42px;
+  line-height: 1.6;
+}
+.elapsed {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
   font-size: 12px;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .spinner {
-  width: 17px;
-  height: 17px;
-  border: 2px solid #d4dff4;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 2px solid var(--line);
   border-top-color: var(--blue);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1286,6 +1305,40 @@ tbody tr:hover {
 #check-view > .page-intro > div > p { font-size: 15px; }
 #check-view .drop-zone { min-height: 290px; }
 #check-view .drop-zone h3 { font-size: 23px; }
+#check-view .drop-zone.has-files > h3 { font-size: 18px; font-weight: 500; }
+#check-view .drop-zone.is-busy {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 12px;
+  align-content: center;
+  align-items: center;
+  justify-content: normal;
+  padding: 28px 12px;
+  text-align: left;
+  border-color: transparent;
+  background: var(--paper);
+}
+.drop-zone.is-busy > .upload-icon {
+  grid-column: 1;
+  grid-row: 2 / span 2;
+  align-self: start;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  color: var(--muted);
+}
+#check-view .drop-zone.is-busy > h3 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.drop-zone.is-busy > p {
+  grid-column: 2;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
 .review-mode main { max-width: 1760px; padding: 28px 32px 40px; }
 .review-mode .header { height: 72px; }
 .review-mode .results-top { margin-bottom: 20px; gap: 24px; align-items: flex-start; }

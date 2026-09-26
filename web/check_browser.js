@@ -40,6 +40,33 @@ async (page) => {
     page.setDefaultTimeout(10000);
     await page.setViewportSize({width:1440,height:1000});
     await page.goto('http://127.0.0.1:8000');
+    await upload([{name:'НД_для_обучения.zip',type:'application/zip',body:'loading-state'}]);
+    await page.evaluate(() => {
+      window.originalXHR = window.XMLHttpRequest;
+      window.XMLHttpRequest = class {
+        constructor() { this.upload = {}; }
+        open() {}
+        setRequestHeader() {}
+        send() { window.pendingUpload = this; this.upload.onload(); }
+      };
+    });
+    await page.locator('#analyze').click();
+    assert(await page.locator('.upload-actions').isHidden(), 'Inactive upload actions must not compete with processing status');
+    assert((await page.locator('#drop-zone').innerText()).split('Ожидаем результат модели…').length === 2, 'Show the current stage only once');
+    assert(await page.locator('#elapsed').isVisible(), 'Keep elapsed time visible while waiting');
+    assert(await page.locator('#progress').evaluate(el => el === document.activeElement && !el.closest('[aria-busy="true"]')), 'Focus and announce the waiting state');
+    await page.evaluate(() => {
+      pendingUpload.status = 503;
+      pendingUpload.responseText = JSON.stringify({detail:'Модель временно недоступна. Повторите проверку.'});
+      pendingUpload.onload();
+      window.XMLHttpRequest = window.originalXHR;
+      delete window.originalXHR; delete window.pendingUpload;
+    });
+    await page.waitForFunction(() => !busy);
+    assert(await page.locator('#error').isVisible() && await page.locator('#progress').isHidden(), 'A failed request must leave the waiting state');
+    assert(await page.locator('#analyze').evaluate(el => el === document.activeElement && !el.disabled), 'Return focus to the retry action after failure');
+    assert((await page.locator('#file-heading').innerText()) === 'НД_для_обучения.zip', 'Retain selected file after failure');
+    await page.locator('#clear-file').click();
     await upload([{name: 'scan.dcm', body: 'first'}, {name: 'scan.dcm', body: 'second'}, {name: 'broken.dcm', body: 'bad'}]);
     await page.locator('#analyze').click();
     await page.waitForFunction(() => document.querySelectorAll('.study-file').length === 3 && !document.getElementById('download').disabled);

@@ -93,15 +93,17 @@ function choose(candidates) {
   }
   if (next.length > 1 && next.some(isZip)) { error("Выберите несколько DICOM или один ZIP отдельно."); return; }
   files = next;
+  zone.classList.add("has-files");
   error("");
   $("file-heading").textContent = next.length === 1 ? next[0].name : `Выбрано файлов: ${next.length}`;
-  $("file-description").textContent = `${(next.reduce((n, f) => n + f.size, 0) / 1024**2).toLocaleString("ru-RU", {maximumFractionDigits: 2})} МиБ · Готово к проверке`;
+  $("file-description").textContent = `${(next.reduce((n, f) => n + f.size, 0) / 1024**2).toLocaleString("ru-RU", {maximumFractionDigits: 2})} МиБ`;
   $("choose-file").hidden = true;
   $("analyze").hidden = $("clear-file").hidden = false;
   $("analyze").focus();
 }
 function clearFiles() {
   files = [];
+  zone.classList.remove("has-files");
   $("file-input").value = "";
   error("");
   $("file-heading").textContent = "Перетащите снимки сюда";
@@ -135,7 +137,6 @@ function tick() {
 function progress(text) {
   $("result-progress-text").textContent = text;
   $("progress-text").textContent = text;
-  $("file-description").textContent = text;
   connection("Идёт проверка", true);
   tick();
 }
@@ -143,12 +144,19 @@ function setBusy(value) {
   busy = value;
   ++healthSequence;
   $("progress").hidden = !value;
+  $("elapsed").hidden = !value;
+  zone.classList.toggle("is-busy", value);
+  $("upload-heading").textContent = value ? "Проверка снимков" : "Загрузить исследование";
   $("result-progress").hidden = !value || !rows.length;
-  $("upload-workspace").setAttribute("aria-busy", String(value));
+  clearInterval(timer);
+  if (value) {
+    started = Date.now(); timer = setInterval(tick, 1000); tick();
+    if (!$("upload-workspace").hidden) $("progress").focus({preventScroll: true});
+  }
+  zone.querySelector(".upload-actions").hidden = value;
   for (const id of ["choose-file", "analyze", "clear-file", "show-demo", "file-input", "new-upload", "download", "print"])
     $(id).disabled = value;
-  clearInterval(timer);
-  if (value) { started = Date.now(); timer = setInterval(tick, 1000); }
+  if (!value && !rows.length && files.length) $("analyze").focus({preventScroll: true});
 }
 function request(file, imageIndex = null, label = "") {
   progress(`${label}Передаём файл…`);

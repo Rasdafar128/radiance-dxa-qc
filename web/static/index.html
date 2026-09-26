@@ -52,6 +52,13 @@
               <span>DICOM / ZIP</span>
             </div>
             <div class="drop-zone" id="drop-zone">
+              <div id="progress" class="progress" tabindex="-1" aria-labelledby="progress-text" hidden>
+                <div class="progress-heading">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span id="progress-text" role="status">Передаём файл…</span>
+                </div>
+                <p class="progress-hint">Результаты появятся здесь после проверки.</p>
+              </div>
               <svg
                 class="upload-icon"
                 width="60"
@@ -108,11 +115,7 @@
                   Очистить выбор
                 </button>
               </div>
-              <div id="progress" class="progress" role="status" hidden>
-                <span class="spinner" aria-hidden="true"></span
-                ><span id="progress-text">Передаём файл…</span
-                ><small id="elapsed" role="timer" aria-live="off">Прошло 0 с</small>
-              </div>
+              <small id="elapsed" class="elapsed" role="timer" aria-live="off" hidden>Прошло 0 с</small>
             </div>
             <div class="error" id="error" role="alert" hidden></div>
             <div class="sheet-foot">
