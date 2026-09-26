@@ -43,7 +43,7 @@ the overlay workspace in this repository has not been deployed there.
 - Output: one result per file, including duplicates and failures; CSV download.
 - Inspect the uploaded full-frame DICOM beside findings, with zoom, pan,
   brightness, contrast and fullscreen. Display adjustments never change inference.
-- Toggle pixel-derived geometry and heuristic bright-inclusion overlays from dxa-qc; no expert segmentation or millimetre claims. Synthetic examples contain no DICOM.
+- Toggle pixel-derived geometry and heuristic bright-inclusion overlays from dxa-qc; no expert segmentation or millimetre claims. The sample interface uses three owner-provided scans from «Для теста.zip», saved predictions and PNG overlays; original DICOM metadata is excluded and UIDs are replaced.
 - Anatomy-grouped browsing (spine, hips, unknown), session-only reviewed marks and a printable report; model CSV remains independent of review marks.
 - Isolated retry of one failed file, including a ZIP member selected by ordinal.
 - No accounts or persistent study archive in this version.
@@ -62,8 +62,7 @@ precise language. Owner delegated visual direction and implementation choices.
 
 Frozen model metadata in `models/radiance/`; full local artifacts in `artifacts/`;
 research reports and checked aggregate metrics in `research/`. Real DICOM data
-stays outside Git. Synthetic interface examples must be clearly labeled;
-real examples must be identified as such.
+stays outside Git. The owner-authorized sample PNGs and saved predictions are bundled in `web/static/demo.json`, with demo identifiers and a source notice.
 
 ## Product Principles
 

@@ -177,7 +177,32 @@ async (page) => {
       assert(await page.locator('#dicom-image').isHidden(),'Invalid preview data must never reach the image viewer');
       assert(!await page.locator('#download').isDisabled(),'Recovered response must remain downloadable');
     }
-    return 'PASS: upload, retries, anatomy/navigation, overlay/zoom/print, decode failures, immutable CSV, mobile empty filter, skip link, malformed responses';
+    await page.locator('#new-upload').click();
+    await page.route('**/static/demo.json', route => route.fulfill({status:503,body:'Unavailable'}));
+    await page.locator('#show-demo').click();await page.waitForFunction(()=>!busy);
+    assert(await page.locator('#error').isVisible(), 'Demo load failure must be recoverable');
+    assert(await page.locator('#show-demo').isEnabled(), 'Demo can be retried');
+    await page.unroute('**/static/demo.json');
+    const callsBeforeDemo = calls.length;
+    await page.locator('#show-demo').click();await page.waitForFunction(()=>demo && rows.length===3 && !busy);
+    await page.waitForFunction(()=>document.getElementById('dicom-image').naturalWidth===300);
+    assert(calls.length===callsBeforeDemo,'Samples must open without an inference request');
+    assert((await page.locator('.study-group h3').allTextContents()).join('|')==='Позвоночник1|Бёдра2','Demo uses all three archive samples');
+    assert((await page.locator('#demo-notice').innerText()).includes('Сохранённые результаты'),'Identify real saved predictions');
+    assert(await page.locator('.thumbnail img').count()===3,'Samples have real thumbnails');
+    await page.locator('#toggle-annotations').check();
+    await page.waitForFunction(()=>document.getElementById('annotation-image').naturalWidth===300);
+    await page.locator('#next-image').click();
+    assert((await page.locator('#mobile-summary').innerText()).includes('CR000000_ППОБ.dcm'),'Demo navigation opens right hip');
+    await page.evaluate(()=>printReport());
+    assert(await page.locator('#print-report .report-scan').count()===3,'Demo print includes the source images');
+    assert(await page.locator('#print-report .report-overlay').count()===3,'Demo print includes annotations');
+    const downloadPromise=page.waitForEvent('download');await page.locator('#download').click();
+    assert((await downloadPromise).suggestedFilename()==='dxa-demo-results.csv','Demo CSV filename');
+    assert(await page.evaluate(()=>rows.every(r=>r.study_uid.startsWith('DEMO-') && r.image_uid.startsWith('DEMO-'))),'Demo identifiers are replaced');
+    await page.locator('#new-upload').click();
+    assert(await page.locator('#upload-workspace').isVisible() && !await page.evaluate(()=>demo),'New upload clears demo state');
+    return 'PASS: upload, retries, anatomy/navigation, overlay/zoom/print, decode failures, immutable CSV, mobile empty filter, skip link, malformed responses, real saved demo';
   } finally {
     await page.unroute('**/api/health'); await page.unroute('**/api/analyze?*');
     await page.evaluate(() => { rows = []; busy = false; });

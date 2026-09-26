@@ -1,6 +1,8 @@
 """Проверка границы веб-шлюза без GPU: python -m web.check."""
 
 import io
+import json
+from pathlib import Path
 import base64
 import struct
 import unittest
@@ -37,6 +39,27 @@ def dicom_bytes(inverse=False):
     output = io.BytesIO()
     ds.save_as(output)
     return output.getvalue()
+
+
+class DemoCheck(unittest.TestCase):
+    def test_bundled_samples(self):
+        data = json.loads((Path(__file__).parent / "static/demo.json").read_text())
+        self.assertEqual(data["source"], "Для теста.zip")
+        self.assertEqual(len(data["rows"]), 3)
+        self.assertEqual(len(data["previews"]), 3)
+        self.assertEqual([r["path_to_study"] for r in data["rows"]],
+                         ["CR000000_ПОП.dcm", "CR000000_ППОБ.dcm", "CR000001_ЛПОБ.dcm"])
+        self.assertEqual([r["anatomical_region"] for r in data["rows"]],
+                         [REGION_SPINE, REGION_FEMUR, REGION_FEMUR])
+        for row, preview in zip(data["rows"], data["previews"]):
+            self.assertEqual(row["processing_status"], "Success")
+            self.assertTrue(row["study_uid"].startswith("DEMO-STUDY-"))
+            self.assertTrue(row["image_uid"].startswith("DEMO-IMAGE-"))
+            self.assertTrue(0 <= float(row["quality_prob"]) <= 1)
+            for field in ["image", "overlay"]:
+                image = Image.open(io.BytesIO(base64.b64decode(preview[field].split(",", 1)[1])))
+                self.assertEqual(image.size, (preview["width"], preview["height"]))
+                self.assertFalse(image.info)
 
 
 class PreviewCheck(unittest.TestCase):

@@ -194,7 +194,7 @@ not alternate control shapes.
   reveals the inspection heading; “К выбранному файлу” returns to the same row
   and restores its button focus.
 - **Status and examples:** findings, unflagged files and processing failures
-  stay separate. Synthetic data has a prominent textual notice. Connection
+  stay separate. Saved demonstration results have a prominent source notice. Connection
   status distinguishes ready, busy and unavailable.
 - **Icons:** authored stroked SVG; arrows share 18px geometry and 1.7px strokes.
   Meaning remains in button/link text. Decorative SVG is hidden from assistive

@@ -308,7 +308,7 @@ function renderViewer(visible) {
   $("next-image").disabled = position < 0 || position === visible.length - 1;
   const row = rows[selected];
   const preview = previews[selected];
-  const source = !demo && preview?.image?.startsWith("data:image/png;base64,") ? preview.image : "";
+  const source = preview?.image?.startsWith("data:image/png;base64,") ? preview.image : "";
   $("viewer-title").textContent = row ? basename(row.path_to_study) : "Нет выбранного снимка";
   $("viewer-caption").textContent = row
     ? regionLabel(row) + (source && preview.reduced ? " · уменьшенное превью" : "")
@@ -318,7 +318,6 @@ function renderViewer(visible) {
   $("viewer").classList.toggle("is-empty", !source);
   $("viewer-empty").hidden = Boolean(source);
   $("viewer-message").textContent = !row ? "В этой категории нет снимков."
-    : demo ? "В учебном примере нет DICOM. Загрузите свой файл, чтобы рассмотреть снимок."
     : preview?.message || "Превью недоступно. Результат проверки и CSV сохранены.";
   if (view.index !== selected || view.source !== source) {
     view.index = selected;
@@ -459,7 +458,7 @@ function render() {
       button.setAttribute("aria-pressed", String(selected === index));
       button.title = row.path_to_study;
       const thumb = element("span", undefined, "thumbnail");
-      if (!demo && previews[index]?.image?.startsWith("data:image/png;base64,")) {
+      if (previews[index]?.image?.startsWith("data:image/png;base64,")) {
         const img = element("img"); img.src = previews[index].image; img.alt = ""; img.loading = "lazy"; thumb.append(img);
       } else thumb.append(icon("M6 3h8l4 4v14H6zM14 3v5h4"));
       const copy = element("span", undefined, "study-file-copy");
@@ -597,7 +596,7 @@ $("new-upload").addEventListener("click", () => {
 $("download").addEventListener("click", () => {
   if (busy) return;
   const url = URL.createObjectURL(new Blob(["\ufeff", csv], {type: "text/csv;charset=utf-8"}));
-  const link = element("a"); link.href = url; link.download = demo ? "dxa-synthetic-example.csv" : "dxa-results.csv";
+  const link = element("a"); link.href = url; link.download = demo ? "dxa-demo-results.csv" : "dxa-results.csv";
   link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 function formatNumber(value, digits) {
@@ -607,7 +606,7 @@ function printReport() {
   const report = $("print-report"); report.replaceChildren();
   if (!rows.length) return;
   report.append(element("h1", "Radiance · Контроль качества DXA"),
-    element("p", `${demo ? "Учебный пример, вымышленные записи · " : ""}Версия 1.0 · ${(completedAt || new Date()).toLocaleString("ru-RU")}`),
+    element("p", `${demo ? "Пример из «Для теста», сохранённый результат · " : ""}Версия 1.0 · ${(completedAt || new Date()).toLocaleString("ru-RU")}`),
     element("p", $("result-summary").textContent));
   const withAnnotations = $("toggle-annotations").checked;
   report.append(element("p", withAnnotations ? "Разметка включена: расчётные ориентиры и эвристические включения, не экспертная сегментация." : "Разметка отключена: показаны исходные кадры."));
@@ -616,7 +615,7 @@ function printReport() {
     const section = element("article", undefined, "report-image");
     section.append(element("h2", `${index + 1}. ${basename(row.path_to_study)}`));
     const layout = element("div", undefined, "report-layout");
-    if (!demo && previews[index]?.image?.startsWith("data:image/png;base64,")) {
+    if (previews[index]?.image?.startsWith("data:image/png;base64,")) {
       const figure = element("figure", undefined, "report-scan");
       const img = element("img"); img.src = previews[index].image; img.alt = "Полный кадр DICOM"; figure.append(img);
       if (withAnnotations && previews[index].overlay) {
@@ -633,7 +632,7 @@ function printReport() {
       ["Отметка просмотра", reviewed.has(index) ? "Отмечен в этой сессии" : "Не отмечен"]])
       dl.append(element("dt", label), element("dd", String(value ?? "") || "—"));
     text.append(dl);
-    if (withAnnotations && !demo) {
+    if (withAnnotations) {
       if (previews[index]?.overlay) {
         const labels = element("ul");
         for (const item of previews[index].legend || []) labels.append(element("li", item.label + (item.flagged ? " · замечание модели" : "")));
@@ -651,15 +650,32 @@ $("print").addEventListener("click", async () => {
   await Promise.all([...$("print-report").querySelectorAll("img")].map(img => img.decode().catch(() => {})));
   window.print();
 });
-$("show-demo").addEventListener("click", () => {
+$("show-demo").addEventListener("click", async () => {
   if (busy) return;
-  previews = []; sources = []; reviewed.clear(); files = []; filter = "all"; selected = 0;
-  const base = {...Object.fromEntries(columns.map(c => [c, ""])), study_uid: "SYNTHETIC-STUDY", processing_status: "Success"};
-  rows = [
-    {...base, image_uid: "SYNTHETIC-1", path_to_study: "Пример / spine_01.dcm", anatomical_region: spine, quality_class: "1", quality_prob: "0.782", violation_type: "Присутствуют посторонние предметы"},
-    {...base, image_uid: "SYNTHETIC-2", path_to_study: "Пример / hip_01.dcm", anatomical_region: hip, quality_class: "0", quality_prob: "0.164"},
-    {...base, image_uid: "SYNTHETIC-3", path_to_study: "Пример / hip_02.dcm", anatomical_region: hip, quality_class: "1", quality_prob: "0.643", violation_type: "Некорректная укладка"},
-    {...base, study_uid: "", path_to_study: "Пример / unreadable.dcm", processing_status: "Failure"},
-  ];
-  csv = exportRows(); demo = true; completedAt = new Date(); showResults();
+  const heading = $("file-heading").textContent, description = $("file-description").textContent;
+  $("file-heading").textContent = "Для теста.zip";
+  $("file-description").textContent = "3 снимка: позвоночник и бёдра";
+  error(""); setBusy(true); progress("Открываем сохранённый пример…");
+  $("upload-heading").textContent = "Пример проверки";
+  connection("Открываем пример", true);
+  try {
+    const response = await fetch("/static/demo.json", {signal: AbortSignal.timeout(15000)});
+    if (!response.ok) throw new Error();
+    const result = await response.json();
+    if (!Array.isArray(result.rows) || !result.rows.length
+        || result.rows.some(row => columns.some(key => typeof row?.[key] !== "string"))
+        || !Array.isArray(result.previews) || result.previews.length !== result.rows.length
+        || result.previews.some(preview => typeof preview?.image !== "string")) throw new Error();
+    rows = result.rows; previews = result.previews; sources = []; files = [];
+    reviewed.clear(); filter = "all"; selected = 0;
+    csv = exportRows(); demo = true; completedAt = new Date(result.generated_at);
+    showResults();
+  } catch {
+    error("Не удалось открыть пример. Попробуйте ещё раз или загрузите свои снимки.");
+  } finally {
+    $("file-heading").textContent = heading; $("file-description").textContent = description;
+    setBusy(false); health();
+    if (rows.length) render();
+    else $("show-demo").focus({preventScroll: true});
+  }
 });
