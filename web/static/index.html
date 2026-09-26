@@ -212,6 +212,9 @@
                   <button class="viewer-button" id="next-image" aria-label="Следующий снимок" title="Следующий снимок">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6" /></svg>
                   </button>
+                  <button class="viewer-button" id="fullscreen-image" aria-label="Открыть просмотр на весь экран" title="На весь экран">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" /></svg>
+                  </button>
                 </div>
               </div>
               <div class="viewer-toolbar" aria-label="Инструменты просмотра">
@@ -225,9 +228,6 @@
                   </button>
                   <button class="viewer-button" id="fit-image">Вписать</button>
                 </div>
-                <button class="viewer-button" id="fullscreen-image" aria-label="Открыть просмотр на весь экран" title="На весь экран">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" /></svg>
-                </button>
               </div>
               <div class="viewer-stage" id="viewer-stage" tabindex="0" role="region" aria-label="Снимок DICOM" aria-describedby="viewer-hint">
                 <img id="dicom-image" alt="" draggable="false" hidden />
@@ -240,10 +240,10 @@
               <div class="annotation-controls" id="annotation-controls" hidden>
                 <label class="annotation-toggle"><input type="checkbox" id="toggle-annotations" checked /> Показать разметку</label>
                 <details class="annotation-details" id="annotation-details">
-                  <summary>Обозначения</summary>
+                  <summary>О разметке</summary>
                   <div class="annotation-legend" id="annotation-legend" aria-label="Обозначения разметки"></div>
+                  <p id="annotation-note"></p>
                 </details>
-                <p id="annotation-note"></p>
               </div>
               <details class="viewer-settings"><summary>Настройки изображения</summary><div class="viewer-adjustments">
                 <label for="image-brightness">Яркость <output id="brightness-value">100%</output>

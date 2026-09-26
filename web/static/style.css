@@ -716,7 +716,8 @@ tbody tr:hover {
 .viewer-stage.is-zoomed { cursor: grab; touch-action: none; }
 .viewer-stage.is-zoomed:active { cursor: grabbing; }
 .viewer-stage img {
-  width: 100%; height: 100%; object-fit: contain;
+  position: absolute; left: 50%; top: 50%;
+  object-fit: contain;
   transform-origin: center; pointer-events: none;
 }
 .viewer-empty {
@@ -749,7 +750,9 @@ tbody tr:hover {
   margin: 0; padding: 0 22px 12px; max-width: none;
 }
 .viewer:fullscreen { border: 0; border-radius: 0; overflow: auto; display: flex; flex-direction: column; }
-.viewer:fullscreen .viewer-stage { flex: 1; min-height: 200px; }
+.viewer:fullscreen .viewer-stage { flex: 1; min-height: 120px; }
+.viewer:fullscreen > :not(.viewer-stage) { flex-shrink: 0; }
+.viewer:fullscreen .viewer-heading h2 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .viewer.is-empty { align-self: start; }
 .viewer.is-empty .viewer-stage { height: 220px; }
 .viewer.is-empty .viewer-toolbar,
@@ -1305,7 +1308,10 @@ tbody tr:hover {
 #check-view > .page-intro > div > p { font-size: 15px; }
 #check-view .drop-zone { min-height: 290px; }
 #check-view .drop-zone h3 { font-size: 23px; }
-#check-view .drop-zone.has-files > h3 { font-size: 18px; font-weight: 500; }
+#check-view .drop-zone.has-files > h3 {
+  font-size: 18px; font-weight: 500;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
 #check-view .drop-zone.is-busy {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
@@ -1377,6 +1383,8 @@ tbody tr:hover {
 .review-mode .viewer-stage { height: clamp(340px, calc(100dvh - 370px), 660px); }
 .review-mode .viewer.is-empty .viewer-stage { height: 300px; }
 .review-mode .viewer:fullscreen .viewer-stage { flex: 1; height: auto; }
+.review-mode .viewer:fullscreen .viewer-heading > div:first-child { display: block; }
+.viewer:fullscreen .mobile-summary { display: none; }
 .viewer-settings > summary { cursor: pointer; padding: 14px 16px; min-height: 46px; color: var(--muted); font-size: 12px; }
 .viewer-settings[open] > summary { border-bottom: 1px solid var(--line); }
 .viewer-settings .viewer-adjustments { flex-wrap: wrap; padding: 16px; gap: 16px; }
@@ -1391,7 +1399,7 @@ tbody tr:hover {
 .finding-copy { min-width: 0; }
 .finding-copy strong { font-size: 14px; line-height: 1.5; font-weight: 550; }
 .criterion-help { margin-top: 8px; }
-.criterion-help summary { font-size: 12px; min-height: 32px; padding: 5px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.criterion-help summary { font-size: 12px; min-height: 44px; padding: 11px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .criterion-help p { color: var(--ink); font-size: 13px; line-height: 1.7; margin: 4px 0 0; }
 .other-checks { margin: 0 0 20px; color: var(--muted); }
 .other-checks > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-size: 13px; }
@@ -1478,7 +1486,6 @@ summary:focus-visible, input:focus-visible { outline: 3px solid #517cce; outline
   .report-layout dd { margin: 0; overflow-wrap: anywhere; }
 }
 
-#annotation-image { position: absolute; inset: 0; }
 .annotation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 12px; }
 .annotation-details { margin-left: auto; }
 .annotation-details[open] { flex-basis: 100%; margin-left: 0; }

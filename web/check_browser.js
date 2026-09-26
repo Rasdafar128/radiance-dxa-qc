@@ -2,6 +2,8 @@
 async (page) => {
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
   const viewport = page.viewportSize();
+  const acceptNavigation = dialog => dialog.accept();
+  page.on("dialog", acceptNavigation);
   const columns = ['path_to_study', 'study_uid', 'image_uid', 'anatomical_region', 'quality_class', 'quality_prob', 'violation_type', 'processing_status', 'time_of_processing'];
   const row = (name, id, finding = false) => ({path_to_study: name, study_uid: 'study-1', image_uid: id,
     anatomical_region: ['second','two'].includes(id) ? 'Проксимальный отдел бедра' : 'Поясничный отдел позвоночника', quality_class: finding ? '1' : '0', quality_prob: finding ? '0.8' : '0.1',
@@ -9,16 +11,25 @@ async (page) => {
   const failure = {...row('broken.dcm', ''), study_uid: '', anatomical_region: '', quality_class: '', quality_prob: '', processing_status: 'Failure'};
   const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR4nGP8vyVkCwMewIRPcvgoAADUCwLLObLQTgAAAABJRU5ErkJggg==';
   const pack = rows => ({rows, csv: columns.join(',') + '\n' + rows.map(r => columns.map(k => '"' + r[k].replaceAll('"', '""') + '"').join(',')).join('\n') + '\n', previews: rows.map(r => r.processing_status === "Success" ? {image:pixel,overlay:pixel,width:8,height:8,legend:[]} : {})});
-  const upload = files => page.evaluate(files => {
+  let pendingBodies = [];
+  const sourceBodies = new Map();
+  const upload = async files => {
+    pendingBodies = files.map(f => f.body);
+    for (const f of files) sourceBodies.set(f.name, f.body);
+    await page.evaluate(files => {
     const transfer = new DataTransfer();
     for (const f of files) transfer.items.add(new File([f.body], f.name, {type: f.type || 'application/dicom'}));
     const input = document.getElementById('file-input');
     input.files = transfer.files; input.dispatchEvent(new Event('change', {bubbles: true}));
-  }, files);
+    }, files);
+  };
   const calls = [];
   await page.route('**/api/health', route => route.fulfill({json: {status: 'ok', model: 'Radiance', busy: false}}));
   await page.route('**/api/analyze?*', async route => {
-    const request = route.request(), url = request.url(), body = request.postData();
+    const request = route.request(), url = request.url();
+    // WebKit does not expose intercepted File bodies. Use the matching test fixture.
+    const pendingBody = pendingBodies.shift();
+    const body = request.postData() ?? pendingBody ?? sourceBodies.get(decodeURIComponent(/filename=([^&]*)/.exec(url)[1]));
     calls.push({body, index: (/image_index=(\d+)/.exec(url)?.[1] || null)});
     if (body === 'null-response' || body === 'null-row') {
       await route.fulfill({body: JSON.stringify(body === 'null-response' ? null : {rows:[null],csv:'x'}), contentType:'application/json'}); return;
@@ -172,5 +183,6 @@ async (page) => {
     await page.evaluate(() => { rows = []; busy = false; });
     await page.reload();
     if (viewport) await page.setViewportSize(viewport);
+    page.off("dialog", acceptNavigation);
   }
 }

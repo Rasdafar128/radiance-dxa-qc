@@ -39,7 +39,7 @@ const statusText = (row) => failed(row) ? "Не обработан" : attention(
 const statusClass = (row) => failed(row) ? "failed" : attention(row) ? "warn" : "ok";
 const findings = (row) => String(row.violation_type || "").split(";").map(s => s.trim()).filter(Boolean);
 const mainFinding = (row) => failed(row) ? "Файл не обработан" : attention(row)
-  ? findings(row).join(" · ") : "Модель не отметила нарушений";
+  ? findings(row).join(" · ") || "Есть замечания модели" : "Модель не отметила нарушений";
 function error(message) {
   const target = $(rows.length ? "result-error" : "error");
   target.textContent = message;
@@ -96,6 +96,7 @@ function choose(candidates) {
   zone.classList.add("has-files");
   error("");
   $("file-heading").textContent = next.length === 1 ? next[0].name : `Выбрано файлов: ${next.length}`;
+  $("file-heading").title = next.length === 1 ? next[0].name : "";
   $("file-description").textContent = `${(next.reduce((n, f) => n + f.size, 0) / 1024**2).toLocaleString("ru-RU", {maximumFractionDigits: 2})} МиБ`;
   $("choose-file").hidden = true;
   $("analyze").hidden = $("clear-file").hidden = false;
@@ -107,6 +108,7 @@ function clearFiles() {
   $("file-input").value = "";
   error("");
   $("file-heading").textContent = "Перетащите снимки сюда";
+  $("file-heading").removeAttribute("title");
   $("file-description").textContent = "Несколько DICOM или один ZIP с исследованиями. До 256 МиБ суммарно, ZIP без пароля.";
   $("choose-file").hidden = false;
   $("analyze").hidden = $("clear-file").hidden = true;
@@ -244,7 +246,7 @@ function openResult(index) {
   selected = index;
   render();
   if (matchMedia("(max-width: 1100px)").matches) $("study-list").open = false;
-  const target = $(matchMedia("(max-width: 800px)").matches ? "mobile-summary" : "inspection-title");
+  const target = $(document.fullscreenElement ? "viewer-title" : matchMedia("(max-width: 800px)").matches ? "mobile-summary" : "inspection-title");
   target.focus({preventScroll: true});
   if (matchMedia("(max-width: 800px)").matches) target.scrollIntoView({block: "start"});
 }
@@ -262,12 +264,16 @@ function applyView() {
   const active = !scan.hidden;
   const width = scan.naturalWidth || stage.clientWidth;
   const height = scan.naturalHeight || stage.clientHeight;
-  const fit = Math.min(stage.clientWidth / width, stage.clientHeight / height);
+  const fit = Math.max(0, Math.min((stage.clientWidth - 16) / width, (stage.clientHeight - 16) / height));
+  for (const image of [scan, overlay]) {
+    image.style.width = `${width * fit}px`;
+    image.style.height = `${height * fit}px`;
+  }
   const maxX = Math.max(0, (width * fit * view.zoom - stage.clientWidth) / 2);
   const maxY = Math.max(0, (height * fit * view.zoom - stage.clientHeight) / 2);
   view.x = Math.max(-maxX, Math.min(maxX, view.x));
   view.y = Math.max(-maxY, Math.min(maxY, view.y));
-  scan.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+  scan.style.transform = `translate(-50%, -50%) translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
   overlay.style.transform = scan.style.transform;
   scan.style.filter = `brightness(${$("image-brightness").value}%) contrast(${$("image-contrast").value}%)`;
   $("zoom-value").textContent = view.zoom.toLocaleString("ru-RU", { minimumFractionDigits: 1 }) + "×";
@@ -275,7 +281,11 @@ function applyView() {
   $("contrast-value").textContent = $("image-contrast").value + "%";
   $("zoom-out").disabled = !active || view.zoom <= 1;
   $("zoom-in").disabled = !active || view.zoom >= 4;
-  for (const id of ["fit-image", "reset-image", "image-brightness", "image-contrast"])
+  const fitted = view.zoom === 1 && view.x === 0 && view.y === 0;
+  $("fit-image").disabled = !active || fitted;
+  $("fit-image").textContent = fitted ? "Вписано" : "Вписать";
+  $("fit-image").title = fitted ? "Весь кадр помещается в окне" : "Показать весь кадр";
+  for (const id of ["reset-image", "image-brightness", "image-contrast"])
     $(id).disabled = !active;
   stage.classList.toggle("is-zoomed", active && view.zoom > 1);
 }
@@ -304,6 +314,7 @@ function renderViewer(visible) {
     ? regionLabel(row) + (source && preview.reduced ? " · уменьшенное превью" : "")
     : "Выберите другую категорию в списке файлов.";
   scan.hidden = !source;
+  $("fullscreen-image").hidden = !document.fullscreenEnabled || (!source && !document.fullscreenElement);
   $("viewer").classList.toggle("is-empty", !source);
   $("viewer-empty").hidden = Boolean(source);
   $("viewer-message").textContent = !row ? "В этой категории нет снимков."
@@ -319,8 +330,10 @@ function renderViewer(visible) {
     resetView();
   }
   const hasOverlay = Boolean(source && preview?.overlay?.startsWith("data:image/png;base64,"));
-  $("annotation-details").hidden = !hasOverlay;
+  $("annotation-details").hidden = !source;
   $("toggle-annotations").disabled = !hasOverlay;
+  $("toggle-annotations").closest("label").hidden = !hasOverlay;
+  $("annotation-details").querySelector("summary").textContent = hasOverlay ? "О разметке" : "Почему нет разметки";
   overlay.hidden = !hasOverlay || !$("toggle-annotations").checked;
   if (hasOverlay) overlay.src = preview.overlay;
   else overlay.removeAttribute("src");
@@ -396,6 +409,7 @@ fullscreen.addEventListener("click", async () => {
 document.addEventListener("fullscreenchange", () => {
   fullscreen.setAttribute("aria-label", document.fullscreenElement ? "Выйти из полного экрана" : "Открыть просмотр на весь экран");
   fullscreen.title = document.fullscreenElement ? "Выйти из полного экрана" : "На весь экран";
+  fullscreen.hidden = !document.fullscreenEnabled || (scan.hidden && !document.fullscreenElement);
   applyView();
 });
 new ResizeObserver(applyView).observe(stage);
@@ -478,7 +492,7 @@ function nextAttention() {
 function nextButton(id) {
   const button = element("button", "Следующее с замечанием", "button secondary next-attention");
   button.id = id;
-  button.disabled = !rows.some((r, i) => i !== selected && attention(r) && !reviewed.has(i));
+  button.hidden = !rows.some((r, i) => i !== selected && attention(r) && !reviewed.has(i));
   button.addEventListener("click", nextAttention); return button;
 }
 function renderMobileSummary() {
@@ -497,9 +511,10 @@ function renderMobileSummary() {
 function renderInspection() {
   const panel = $("inspection"); panel.replaceChildren();
   const row = rows[selected];
-  const title = element("h2", row ? (failed(row) ? "Не удалось проверить" : "Результат проверки") : "Нет выбранного снимка");
+  panel.hidden = !row;
+  if (!row) return;
+  const title = element("h2", failed(row) ? "Не удалось проверить" : "Результат проверки");
   title.id = "inspection-title"; title.tabIndex = -1; panel.append(title);
-  if (!row) { panel.append(element("p", "Выберите другую категорию снимков.", "inspection-note")); return; }
   if (!attention(row)) panel.append(element("span", statusText(row), "status " + statusClass(row)));
   if (failed(row)) {
     panel.append(element("p", previews[selected]?.message || "Проверьте, что файл — поддерживаемый однокадровый монохромный DICOM.", "inspection-note"));
@@ -525,7 +540,11 @@ function renderInspection() {
       }
       item.append(copy); (yes ? list : otherList).append(item);
     }
+    const known = (criteria[row.anatomical_region] || []).map(([key]) => key);
+    for (const name of found.filter(name => !known.includes(name)))
+      list.append(element("li", name, "found"));
     if (list.children.length) panel.append(list);
+    else if (attention(row)) panel.append(element("span", "Есть замечания модели", "status warn"));
     if (otherList.children.length) {
       const other = element("details", undefined, "other-checks");
       other.append(element("summary", `Без замечаний модели · ${otherList.children.length}`), otherList);
