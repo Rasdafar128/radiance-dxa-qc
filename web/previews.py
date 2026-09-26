@@ -8,6 +8,7 @@ import pydicom
 from PIL import Image
 
 from src.solution.dicom import pixels
+from .annotations import annotate
 
 MAX_FILE = 32 * 1024**2
 MAX_EXPANDED = 512 * 1024**2
@@ -39,7 +40,8 @@ def build_previews(source, rows):
                 try:
                     with archive.open(member) as stream:
                         ds = pydicom.dcmread(stream)
-                        image = Image.fromarray(pixels(ds))
+                        frame = pixels(ds)
+                        image = Image.fromarray(frame)
                     original = image.size
                     image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
                     output = BytesIO()
@@ -48,10 +50,25 @@ def build_previews(source, rows):
                     if used + len(data) > MAX_PREVIEWS:
                         result[index] = {"message": "Лимит превью пакета достигнут. Загрузите этот DICOM отдельно."}
                         continue
+                    try:
+                        overlay, legend, notes = annotate(frame, row)
+                        annotation = {"legend": legend, "annotation_notes": notes}
+                        if overlay.getbbox():
+                            overlay = overlay.resize(image.size, Image.Resampling.LANCZOS)
+                            overlay_output = BytesIO()
+                            overlay.save(overlay_output, format="PNG")
+                            overlay_data = overlay_output.getvalue()
+                            if used + len(data) + len(overlay_data) <= MAX_PREVIEWS:
+                                annotation["overlay"] = "data:image/png;base64," + base64.b64encode(overlay_data).decode("ascii")
+                                used += len(overlay_data)
+                            else:
+                                annotation = {"annotation_notes": ["Лимит разметки пакета достигнут. Откройте DICOM отдельно."]}
+                    except Exception:
+                        annotation = {"annotation_notes": ["Разметка недоступна. Снимок и результат проверки сохранены."]}
                     used += len(data)
                     result[index] = {"image": "data:image/png;base64," + base64.b64encode(data).decode("ascii"),
                                      "width": original[0], "height": original[1],
-                                     "reduced": image.size != original}
+                                     "reduced": image.size != original, **annotation}
                 except Exception:
                     # Ошибка просмотра не отменяет уже полученный CSV.
                     continue

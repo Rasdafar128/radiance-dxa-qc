@@ -4,11 +4,13 @@ import asyncio
 from contextlib import asynccontextmanager
 import csv
 import io
+import lzma
 import os
 from pathlib import Path
 import shutil
 from tempfile import TemporaryFile
 import zipfile
+import zlib
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -37,7 +39,7 @@ def retry_member(source, target, index):
                 with archive.open(member.filename, "w") as output:
                     shutil.copyfileobj(stream, output)
         target.seek(0)
-    except (zipfile.BadZipFile, ValueError, RuntimeError, OSError):
+    except (zipfile.BadZipFile, ValueError, RuntimeError, OSError, zlib.error, lzma.LZMAError):
         raise HTTPException(400, "Не удалось повторить этот файл. Выберите исправный DICOM отдельно.") from None
 
 

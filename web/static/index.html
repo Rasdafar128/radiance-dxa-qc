@@ -41,15 +41,8 @@
               Проверка качества DXA
             </h1>
             <p>
-              Загрузите исследование, проверьте замечания и сохраните отчёт.
+              Загрузите DICOM позвоночника или бёдер и проверьте замечания.
             </p>
-          </div>
-          <div class="intro-note">
-            <span class="model-tag">Модель Radiance</span>
-            <p>Поясничный отдел<br />и проксимальный отдел бедра</p>
-            <span class="note-caption"
-              >Исследовательский прототип · ЛЦТ 2026</span
-            >
           </div>
         </div>
         <div class="workspace" id="upload-workspace">
@@ -124,7 +117,7 @@
             <div class="error" id="error" role="alert" hidden></div>
             <div class="sheet-foot">
               <span
-                >Файлы и отметки просмотра доступны только в этой сессии.<br />Скачайте отчёт перед закрытием вкладки.</span
+                >Скачайте отчёт перед закрытием вкладки.</span
               ><button class="text-button" id="show-demo">
                 Попробовать интерфейс
                 <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -188,7 +181,6 @@
           </p>
           <div id="result-error" class="error" role="alert" hidden></div>
           <div class="result-progress" id="result-progress" hidden><span id="result-progress-text" role="status"></span><span id="result-elapsed" role="timer" aria-live="off"></span></div>
-          <div class="mobile-summary" id="mobile-summary" tabindex="-1"></div>
           <div class="results-workspace">
             <details class="study-list" id="study-list" open>
               <summary id="study-list-summary">Снимки исследования</summary>
@@ -201,9 +193,9 @@
               </div>
               <div id="result-rows" class="study-groups"></div>
               <p class="empty-filter" id="empty-filter" hidden>В этой категории нет снимков.</p>
-              <p class="session-note">Отметки просмотра сохраняются до новой проверки или закрытия вкладки.</p>
             </details>
             <section class="viewer" id="viewer" aria-labelledby="viewer-title">
+              <div class="mobile-summary" id="mobile-summary" tabindex="-1"></div>
               <div class="viewer-heading">
                 <div>
                   <h2 id="viewer-title" tabindex="-1">Просмотр снимка</h2>
@@ -236,12 +228,21 @@
               </div>
               <div class="viewer-stage" id="viewer-stage" tabindex="0" role="region" aria-label="Снимок DICOM" aria-describedby="viewer-hint">
                 <img id="dicom-image" alt="" draggable="false" hidden />
+                <img id="annotation-image" alt="Геометрическая разметка снимка" draggable="false" hidden />
                 <div class="viewer-empty" id="viewer-empty" role="status">
                   <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14V8h6m20 0h6v6M8 34v6h6m20 0h6v-6M16 24h16m-8-8v16" /></svg>
                   <p id="viewer-message">Загрузите DICOM для просмотра.</p>
                 </div>
               </div>
-              <details class="viewer-settings"><summary>Настройки изображения и управление</summary><div class="viewer-adjustments">
+              <div class="annotation-controls" id="annotation-controls" hidden>
+                <label class="annotation-toggle"><input type="checkbox" id="toggle-annotations" checked /> Показать разметку</label>
+                <details class="annotation-details" id="annotation-details">
+                  <summary>Обозначения</summary>
+                  <div class="annotation-legend" id="annotation-legend" aria-label="Обозначения разметки"></div>
+                </details>
+                <p id="annotation-note"></p>
+              </div>
+              <details class="viewer-settings"><summary>Настройки изображения</summary><div class="viewer-adjustments">
                 <label for="image-brightness">Яркость <output id="brightness-value">100%</output>
                   <input id="image-brightness" type="range" min="50" max="150" step="5" value="100" />
                 </label>
@@ -251,7 +252,7 @@
                 <button class="viewer-button" id="reset-image">Сбросить</button>
               </div>
               <p class="viewer-hint" id="viewer-hint">Увеличьте снимок и перемещайте его мышью или пальцем. С клавиатуры: + / −, стрелки; 0 — сброс.</p>
-              </details><p class="viewer-disclaimer">Полный кадр · Настройки не влияют на проверку · Без локализации нарушений</p>
+              </details>
             </section>
             <aside
               class="inspection"
@@ -260,20 +261,12 @@
             ></aside>
           </div>
         </section>
-        <div class="bottom-note">
-          <span>Полный кадр. Две модели. Один отчёт.</span
-          ><a href="#model"
-            >Как устроена проверка
-            <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 17 17 7M7 7h10v10" /></svg
-          ></a>
-        </div>
       </section>
       <section id="model-view" aria-labelledby="model-title" hidden>
         <div class="page-intro">
           <div>
             <h1 id="model-title">
-              Проверяем качество.<br /><span>Показываем границы.</span>
+              О модели Radiance
             </h1>
             <p>
               Две предобученные модели, фиксированные пороги<br

@@ -9,7 +9,7 @@ COLUMNS = ['angle', 'angle_end', 'height', 'lateral', 'top', 'below_lt', 'hip_fo
 TASK_COLUMNS = {'spine_axis': [0, 1], 'hip_roi': [2, 3, 4, 5, 6]}
 
 
-def spine_axis(img):
+def spine_axis(img, landmarks=None):
     h, w = img.shape
     a = cv2.GaussianBlur(img.astype(np.float32), (0, 0), 3)
     profile = a[int(h * .2):int(h * .8)].mean(0)
@@ -36,6 +36,10 @@ def spine_axis(img):
         weights = 1 / np.maximum(1, np.abs(residual) / (2 * scale))
     n = len(ys) // 6
     end_slope = (xs[-n:].mean() - xs[:n].mean()) / (ys[-n:].mean() - ys[:n].mean())
+    if landmarks is not None:
+        landmarks.update(axis=(float(slope), float(intercept)),
+                         y_span=(float(ys.min()), float(ys.max())),
+                         band=(max(0, x0 - 55), min(w, x0 + 55)))
     return np.degrees(np.arctan(np.abs([slope, end_slope])))
 
 
@@ -98,7 +102,8 @@ def _femur(img, low):
     return femur, y0, y1, xl, xr, ys, width
 
 
-def hip_field(img):
+def hip_field(img, landmarks=None):
+    original = img
     img = canonical_hip(img)
     h, _ = img.shape
     missing = [h, np.nan, np.nan, np.nan, 0.]
@@ -139,6 +144,11 @@ def hip_field(img):
         k = int(np.argmax(bump))
         if bump[k] > .03 * width:
             lt_y = float(seg_y[k])
+    if landmarks is not None:
+        top_x = float(np.where(femur[top, lateral:lateral + band])[0].mean() + lateral)
+        landmarks.update(mirrored=img is not original, top=(top_x, float(top)),
+                         lateral=(float(lateral), float(lat_y)),
+                         lesser=(float(xr[int(lt_y)]), lt_y) if np.isfinite(lt_y) else None)
     return [h, lateral, top, h - lt_y, 1.]
 
 

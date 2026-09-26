@@ -11,7 +11,7 @@ const criteria = {
   [spine]: [
     ["Некорректная укладка", "Укладка", "Проверьте полноту кадра: половина тела Th12 сверху и верхние края подвздошных костей снизу."],
     ["Не выравнена ось позвоночника", "Ось позвоночника", "Оцените ось по центрам тел позвонков относительно вертикали кадра. По ТЗ допустим наклон до 5°. Изгиб позвоночника сам по себе не означает ошибку укладки."],
-    ["Присутствуют посторонние предметы", "Посторонние предметы", "Осмотрите полный кадр на металлические предметы и наложения одежды. Модель отмечает тип нарушения, но не определяет его положение."],
+    ["Присутствуют посторонние предметы", "Посторонние предметы", "Осмотрите полный кадр на металлические предметы и наложения одежды. Подсветка показывает подозрительные яркие включения, если их удалось выделить."],
   ],
   [hip]: [
     ["Некорректная укладка", "Укладка", "Проверьте видимость большого вертела, шейки бедра и седалищной кости. Оцените ротацию по контуру малого вертела согласно критериям ТЗ."],
@@ -30,6 +30,11 @@ const basename = (name) => String(name || "Без имени").split(/[\\/]/).po
 const isZip = (file) => /\.zip$/i.test(file.name) || file.type === "application/zip";
 const regionLabel = (row) => row.anatomical_region === spine ? "Поясничный отдел"
   : row.anatomical_region === hip ? "Проксимальный отдел бедра" : "Область не определена";
+const anatomicalGroups = ["Позвоночник", "Бёдра", "Область не определена"];
+const anatomicalGroup = row => row.anatomical_region === spine ? "Позвоночник"
+  : row.anatomical_region === hip ? "Бёдра" : "Область не определена";
+const anatomicalRows = () => rows.map((row, index) => ({row, index})).sort((a, b) =>
+  anatomicalGroups.indexOf(anatomicalGroup(a.row)) - anatomicalGroups.indexOf(anatomicalGroup(b.row)));
 const statusText = (row) => failed(row) ? "Не обработан" : attention(row) ? "Есть замечания" : "Без замечаний модели";
 const statusClass = (row) => failed(row) ? "failed" : attention(row) ? "warn" : "ok";
 const findings = (row) => String(row.violation_type || "").split(";").map(s => s.trim()).filter(Boolean);
@@ -53,6 +58,7 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 route();
+document.querySelector(".skip").addEventListener("click", event => { event.preventDefault(); $("main").focus(); });
 let healthSequence = 0;
 function connection(text, online) {
   $("connection").className = "connection " + (online ? "online" : "offline");
@@ -159,12 +165,21 @@ function request(file, imageIndex = null, label = "") {
       try { result = JSON.parse(xhr.responseText); }
       catch { reject(new Error("Сервис вернул неожиданный ответ. Повторите проверку.")); return; }
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error(typeof result.detail === "string" ? result.detail : "Проверка не выполнена.")); return;
+        reject(new Error(typeof result?.detail === "string" ? result.detail : "Проверка не выполнена.")); return;
       }
-      if (!Array.isArray(result.rows) || !result.rows.length || typeof result.csv !== "string"
-          || result.rows.some(r => columns.some(key => !(key in r)))) {
+      if (!Array.isArray(result?.rows) || !result.rows.length || typeof result.csv !== "string"
+          || result.rows.some(r => !r || columns.some(key => typeof r[key] !== "string"))) {
         reject(new Error("Ответ модели неполный. Повторите проверку.")); return;
       }
+      result.previews = result.rows.map((_, i) => {
+        const preview = result.previews?.[i];
+        return {...preview,
+          image: typeof preview?.image === "string" ? preview.image : "",
+          overlay: typeof preview?.overlay === "string" ? preview.overlay : "",
+          legend: Array.isArray(preview?.legend) ? preview.legend.filter(item => typeof item?.label === "string") : [],
+          annotation_notes: Array.isArray(preview?.annotation_notes) ? preview.annotation_notes.filter(note => typeof note === "string") : [],
+        };
+      });
       resolve(result);
     };
     xhr.onerror = () => reject(new Error("Соединение прервалось. Проверьте сеть и повторите отправку."));
@@ -206,12 +221,14 @@ $("analyze").addEventListener("click", async () => {
   }
 });
 function showResults(focus = true) {
+  const firstResult = $("results").hidden;
   $("check-view").classList.add("has-results");
   route();
   $("upload-workspace").hidden = true;
   $("results").hidden = false;
   $("demo-notice").hidden = !demo;
   $("result-progress").hidden = !busy;
+  if (firstResult && matchMedia("(max-width: 1100px)").matches) $("study-list").open = false;
   render();
   if (focus) $("results-heading").focus({preventScroll: true});
 }
@@ -231,6 +248,7 @@ function icon(pathData, viewBox = "0 0 24 24") {
 const view = { zoom: 1, x: 0, y: 0, index: -1, source: "", visible: [] };
 const stage = $("viewer-stage");
 const scan = $("dicom-image");
+const overlay = $("annotation-image");
 let dragging = null;
 function applyView() {
   const active = !scan.hidden;
@@ -242,6 +260,7 @@ function applyView() {
   view.x = Math.max(-maxX, Math.min(maxX, view.x));
   view.y = Math.max(-maxY, Math.min(maxY, view.y));
   scan.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`;
+  overlay.style.transform = scan.style.transform;
   scan.style.filter = `brightness(${$("image-brightness").value}%) contrast(${$("image-contrast").value}%)`;
   $("zoom-value").textContent = view.zoom.toLocaleString("ru-RU", { minimumFractionDigits: 1 }) + "×";
   $("brightness-value").textContent = $("image-brightness").value + "%";
@@ -274,7 +293,7 @@ function renderViewer(visible) {
   const source = !demo && preview?.image?.startsWith("data:image/png;base64,") ? preview.image : "";
   $("viewer-title").textContent = row ? basename(row.path_to_study) : "Нет выбранного снимка";
   $("viewer-caption").textContent = row
-    ? `${regionLabel(row)}${source ? ` · ${preview.width} × ${preview.height} px${preview.reduced ? " · уменьшенное превью" : ""}` : ""}`
+    ? regionLabel(row) + (source && preview.reduced ? " · уменьшенное превью" : "")
     : "Выберите другую категорию в списке файлов.";
   scan.hidden = !source;
   $("viewer").classList.toggle("is-empty", !source);
@@ -291,8 +310,27 @@ function renderViewer(visible) {
     } else scan.removeAttribute("src");
     resetView();
   }
+  const hasOverlay = Boolean(source && preview?.overlay?.startsWith("data:image/png;base64,"));
+  $("annotation-details").hidden = !hasOverlay;
+  $("toggle-annotations").disabled = !hasOverlay;
+  overlay.hidden = !hasOverlay || !$("toggle-annotations").checked;
+  if (hasOverlay) overlay.src = preview.overlay;
+  else overlay.removeAttribute("src");
+  const legend = $("annotation-legend"); legend.replaceChildren();
+  if (hasOverlay) {
+    for (const item of preview.legend || []) {
+      const label = element("span", item.label + (item.flagged ? " · замечание модели" : ""), item.flagged ? "annotation-warn" : "annotation-guide");
+      legend.append(label);
+    }
+  }
+  const notes = preview?.annotation_notes || [];
+  $("annotation-note").textContent = source
+    ? notes.join(" ") || (hasOverlay ? "Расчётные ориентиры, не экспертная разметка." : "Для этого результата разметка недоступна.")
+    : "";
+  $("annotation-controls").hidden = !source;
   applyView();
 }
+$("toggle-annotations").addEventListener("change", () => { overlay.hidden = !$("toggle-annotations").checked; });
 function moveImage(delta) {
   const next = view.visible[view.visible.indexOf(selected) + delta];
   if (next === undefined) return;
@@ -354,33 +392,42 @@ document.addEventListener("fullscreenchange", () => {
 });
 new ResizeObserver(applyView).observe(stage);
 scan.addEventListener("load", applyView);
+overlay.addEventListener("error", () => {
+  const preview = previews[selected];
+  if (!preview?.overlay) return;
+  delete preview.overlay;
+  preview.legend = [];
+  preview.annotation_notes = ["Не удалось показать разметку. Снимок и результат проверки сохранены."];
+  render();
+});
 scan.addEventListener("error", () => {
-  scan.hidden = true;
-  $("viewer").classList.add("is-empty");
-  $("viewer-empty").hidden = false;
-  $("viewer-message").textContent = "Не удалось показать снимок. Повторите загрузку DICOM.";
-  applyView();
+  const preview = previews[selected];
+  if (!preview?.image) return;
+  delete preview.image;
+  delete preview.overlay;
+  preview.message = "Не удалось показать снимок. Повторите загрузку DICOM.";
+  render();
 });
 function render() {
   $("print-report").replaceChildren();
   for (const button of document.querySelectorAll("[data-filter]")) button.setAttribute("aria-pressed", String(button.dataset.filter === filter));
-  const studyNumbers = new Map();
-  for (const row of rows) if (row.study_uid && !studyNumbers.has(row.study_uid)) studyNumbers.set(row.study_uid, studyNumbers.size + 1);
-  const visible = rows.map((row, index) => ({row, index})).filter(({row}) =>
+  const visible = anatomicalRows().filter(({row}) =>
     filter === "all" || (filter === "attention" ? attention(row) : failed(row)));
   if (!visible.some(({index}) => index === selected)) selected = visible.length ? visible[0].index : -1;
   const groups = new Map();
   for (const entry of visible) {
-    const key = entry.row.study_uid || "";
+    const key = anatomicalGroup(entry.row);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(entry);
   }
   const body = $("result-rows");
   const previousScroll = body.scrollTop;
   body.replaceChildren();
-  for (const [key, group] of groups) {
+  for (const key of anatomicalGroups) {
+    const group = groups.get(key);
+    if (!group) continue;
     const section = element("section", undefined, "study-group");
-    const heading = element("h3", key ? `Исследование ${studyNumbers.get(key)}` : "Без идентификатора исследования");
+    const heading = element("h3", key);
     heading.append(element("span", String(group.length), "group-count"));
     section.append(heading);
     for (const {row, index} of group) {
@@ -394,7 +441,7 @@ function render() {
         const img = element("img"); img.src = previews[index].image; img.alt = ""; img.loading = "lazy"; thumb.append(img);
       } else thumb.append(icon("M6 3h8l4 4v14H6zM14 3v5h4"));
       const copy = element("span", undefined, "study-file-copy");
-      copy.append(element("strong", basename(row.path_to_study)), element("span", regionLabel(row), "file-region"),
+      copy.append(element("strong", basename(row.path_to_study)),
         element("span", statusText(row), "file-state " + statusClass(row)));
       if (reviewed.has(index)) copy.append(element("span", "Просмотрено", "reviewed-label"));
       button.append(thumb, copy); button.addEventListener("click", () => openResult(index)); section.append(button);
@@ -403,8 +450,10 @@ function render() {
   }
   body.scrollTop = previousScroll;
   $("empty-filter").hidden = visible.length > 0;
-  $("result-summary").textContent = `${studyNumbers.size ? `Исследований: ${studyNumbers.size} · ` : ""}Файлов: ${rows.length} · С замечаниями: ${rows.filter(attention).length} · Ошибок: ${rows.filter(failed).length}`;
-  $("review-summary").textContent = `Просмотрено ${reviewed.size} из ${rows.filter(r => !failed(r)).length} обработанных снимков${busy ? " · Проверка продолжается" : ""}`;
+  const errors = rows.filter(failed).length;
+  $("result-summary").textContent = `Снимков: ${rows.length} · С замечаниями: ${rows.filter(attention).length}${errors ? ` · Ошибок: ${errors}` : ""}`;
+  $("review-summary").textContent = `Просмотрено ${reviewed.size} из ${rows.filter(r => !failed(r)).length}`;
+  $("review-summary").hidden = reviewed.size === 0;
   $("count-all").textContent = rows.length;
   $("count-attention").textContent = rows.filter(attention).length;
   $("count-failure").textContent = rows.filter(failed).length;
@@ -412,7 +461,9 @@ function render() {
   renderViewer(visible); renderInspection(); renderMobileSummary();
 }
 function nextAttention() {
-  const order = [...rows.keys()].slice(selected + 1).concat([...rows.keys()].slice(0, selected + 1));
+  const indices = anatomicalRows().map(({index}) => index);
+  const position = indices.indexOf(selected);
+  const order = indices.slice(position + 1).concat(indices.slice(0, position + 1));
   const next = order.find(i => attention(rows[i]) && !reviewed.has(i) && i !== selected);
   if (next !== undefined) { filter = "all"; openResult(next); }
 }
@@ -424,8 +475,8 @@ function nextButton(id) {
 }
 function renderMobileSummary() {
   const panel = $("mobile-summary"); panel.replaceChildren();
-  const row = rows[selected]; if (!row) return;
-  panel.append(element("p", basename(row.path_to_study) + " · " + regionLabel(row), "mobile-file"),
+  const row = rows[selected];
+  if (row) panel.append(element("p", basename(row.path_to_study) + " · " + regionLabel(row), "mobile-file"),
     element("h3", mainFinding(row), "mobile-finding " + statusClass(row)));
   const nav = element("div", undefined, "mobile-navigation");
   const list = element("button", "Список снимков", "text-button");
@@ -441,33 +492,37 @@ function renderInspection() {
   const title = element("h2", row ? (failed(row) ? "Не удалось проверить" : "Результат проверки") : "Нет выбранного снимка");
   title.id = "inspection-title"; title.tabIndex = -1; panel.append(title);
   if (!row) { panel.append(element("p", "Выберите другую категорию снимков.", "inspection-note")); return; }
-  panel.append(element("p", regionLabel(row), "inspection-region"), element("span", statusText(row), "status " + statusClass(row)));
+  if (!attention(row)) panel.append(element("span", statusText(row), "status " + statusClass(row)));
   if (failed(row)) {
     panel.append(element("p", previews[selected]?.message || "Проверьте, что файл — поддерживаемый однокадровый монохромный DICOM.", "inspection-note"));
     if (!demo && sources[selected]) {
       const retry = element("button", busy ? "Идёт проверка…" : "Повторить этот файл", "button secondary");
       retry.id = "retry-file"; retry.disabled = busy;
       retry.addEventListener("click", () => retryFile(selected)); panel.append(retry);
-      panel.append(element("p", "Повторится только этот файл. Успешные результаты останутся. Если файл повреждён, загрузите исправную копию новой проверкой.", "inspection-note"));
+      panel.append(element("p", "Если файл повреждён, загрузите исправную копию.", "inspection-note"));
     }
   } else {
     const found = findings(row);
     const list = element("ul", undefined, "finding-list");
-    const checks = [...(criteria[row.anatomical_region] || [])].sort((a, b) => Number(found.includes(b[0])) - Number(found.includes(a[0])));
-    for (const [key, label, help] of checks) {
+    const otherList = element("ul", undefined, "finding-list");
+    for (const [key, label, help] of criteria[row.anatomical_region] || []) {
       const yes = found.includes(key);
       const item = element("li", undefined, yes ? "found" : "not-found");
       item.append(icon(yes ? "M10 3 18 17H2L10 3Zm0 4v5m0 2v1" : "m4 10 4 4 8-8", "0 0 20 20"));
       const copy = element("div", undefined, "finding-copy");
-      copy.append(element("strong", label), element("small", yes ? "Модель отметила нарушение" : "Не отмечено моделью"));
+      copy.append(element("strong", label));
       if (yes) {
         const explanation = element("details", undefined, "criterion-help");
-        explanation.open = true;
         explanation.append(element("summary", "Что проверить"), element("p", help)); copy.append(explanation);
       }
-      item.append(copy); list.append(item);
+      item.append(copy); (yes ? list : otherList).append(item);
     }
-    panel.append(list);
+    if (list.children.length) panel.append(list);
+    if (otherList.children.length) {
+      const other = element("details", undefined, "other-checks");
+      other.append(element("summary", `Без замечаний модели · ${otherList.children.length}`), otherList);
+      panel.append(other);
+    }
     const mark = element("button", reviewed.has(selected) ? "Просмотрено · отменить" : "Отметить просмотренным", "button " + (reviewed.has(selected) ? "secondary" : "primary"));
     mark.id = "mark-reviewed"; mark.disabled = busy; mark.setAttribute("aria-pressed", String(reviewed.has(selected)));
     mark.addEventListener("click", () => {
@@ -475,14 +530,16 @@ function renderInspection() {
       render(); $("mark-reviewed").focus({preventScroll: true});
     });
     panel.append(mark, nextButton("next-attention"));
-    panel.append(element("p", "Отметка означает только просмотр. Прогноз модели и CSV не меняются. Окончательное решение принимает специалист.", "inspection-note"));
+    panel.append(element("p", "Результат требует проверки специалистом.", "inspection-note"));
   }
   const details = element("details", undefined, "metadata"); details.append(element("summary", "Данные файла и оценка"));
   const dl = element("dl");
   for (const [label, value] of [["Путь", row.path_to_study], ["Study UID", row.study_uid], ["Image UID", row.image_uid],
+    ["Размер снимка", previews[selected]?.width ? `${previews[selected].width} × ${previews[selected].height} px` : ""],
     ["Время обработки, с", row.time_of_processing], ["Оценка нарушения, 0–1", failed(row) ? "" : row.quality_prob], ["Модель", "Radiance 1.0"]])
     dl.append(element("dt", label), element("dd", String(value ?? "") || "—"));
-  details.append(dl, element("p", "Оценка модели не является вероятностью заболевания. Отсутствие замечаний не гарантирует отсутствие нарушений."));
+  details.append(dl, element("p", "Оценка модели не является вероятностью заболевания. Отсутствие замечаний не гарантирует отсутствие нарушений."),
+    element("p", "Отметка просмотра не меняет прогноз и CSV и сохраняется до новой проверки или закрытия вкладки."));
   panel.append(details);
 }
 async function retryFile(index) {
@@ -506,7 +563,7 @@ $("new-upload").addEventListener("click", () => {
   if (busy) return;
   $("check-view").classList.remove("has-results"); document.body.classList.remove("review-mode");
   rows = []; previews = []; sources = []; reviewed.clear(); selected = 0; csv = ""; demo = false; completedAt = null;
-  view.index = -1; view.source = ""; $("dicom-image").removeAttribute("src");
+  view.index = -1; view.source = ""; $("dicom-image").removeAttribute("src"); overlay.removeAttribute("src"); overlay.hidden = true;
   $("print-report").replaceChildren(); $("results").hidden = true; $("upload-workspace").hidden = false;
   $("result-error").hidden = true; clearFiles(); $("choose-file").focus();
 });
@@ -525,13 +582,21 @@ function printReport() {
   report.append(element("h1", "Radiance · Контроль качества DXA"),
     element("p", `${demo ? "Учебный пример, вымышленные записи · " : ""}Версия 1.0 · ${(completedAt || new Date()).toLocaleString("ru-RU")}`),
     element("p", $("result-summary").textContent));
+  const withAnnotations = $("toggle-annotations").checked;
+  report.append(element("p", withAnnotations ? "Разметка включена: расчётные ориентиры и эвристические включения, не экспертная сегментация." : "Разметка отключена: показаны исходные кадры."));
   report.append(element("p", "Результаты модели требуют проверки специалистом. Это не медицинское заключение. Отметка просмотра не подтверждает правильность прогноза."));
   for (const [index, row] of rows.entries()) {
     const section = element("article", undefined, "report-image");
     section.append(element("h2", `${index + 1}. ${basename(row.path_to_study)}`));
     const layout = element("div", undefined, "report-layout");
     if (!demo && previews[index]?.image?.startsWith("data:image/png;base64,")) {
-      const img = element("img"); img.src = previews[index].image; img.alt = "Полный кадр DICOM"; layout.append(img);
+      const figure = element("figure", undefined, "report-scan");
+      const img = element("img"); img.src = previews[index].image; img.alt = "Полный кадр DICOM"; figure.append(img);
+      if (withAnnotations && previews[index].overlay) {
+        const annotation = element("img", undefined, "report-overlay");
+        annotation.src = previews[index].overlay; annotation.alt = "Расчётная разметка"; figure.append(annotation);
+      }
+      layout.append(figure);
     }
     const text = element("div");
     text.append(element("h3", mainFinding(row)), element("p", regionLabel(row)));
@@ -540,10 +605,19 @@ function printReport() {
       ["Результат", statusText(row)], ["Время, с", formatNumber(row.time_of_processing, 2)], ["Оценка нарушения, 0–1", formatNumber(row.quality_prob, 3)],
       ["Отметка просмотра", reviewed.has(index) ? "Отмечен в этой сессии" : "Не отмечен"]])
       dl.append(element("dt", label), element("dd", String(value ?? "") || "—"));
-    text.append(dl); layout.append(text); section.append(layout); report.append(section);
+    text.append(dl);
+    if (withAnnotations && !demo) {
+      if (previews[index]?.overlay) {
+        const labels = element("ul");
+        for (const item of previews[index].legend || []) labels.append(element("li", item.label + (item.flagged ? " · замечание модели" : "")));
+        text.append(labels);
+      }
+      for (const note of previews[index]?.annotation_notes || []) text.append(element("p", note));
+    }
+    layout.append(text); section.append(layout); report.append(section);
   }
 }
-window.addEventListener("beforeprint", () => { if (!$("print-report").children.length) printReport(); });
+window.addEventListener("beforeprint", printReport);
 $("print").addEventListener("click", async () => {
   if (busy || !rows.length) return;
   printReport();

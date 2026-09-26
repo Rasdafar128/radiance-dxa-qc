@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir -r requirements.txt && pip check && useradd --uid
 COPY LICENSE /app/LICENSE
 COPY web /app/web
 COPY src/__init__.py src/config.py /app/src/
-COPY src/solution/__init__.py src/solution/dicom.py /app/src/solution/
+COPY src/solution/__init__.py src/solution/dicom.py src/solution/geometry.py /app/src/solution/
 USER 10001
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"

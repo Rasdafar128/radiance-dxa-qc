@@ -34,6 +34,8 @@ prototype; it does not diagnose osteoporosis or replace expert review.
 The website is hosted at https://sefixnep.ru and calls a separately hosted GPU service.
 Deployment is managed with the owner. The current delivery includes the
 working website, containers, documentation, model release and research audit.
+As checked on 25 September 2026, the public site still uses the previous interface;
+the overlay workspace in this repository has not been deployed there.
 
 ## Capabilities and Constraints
 
@@ -41,8 +43,8 @@ working website, containers, documentation, model release and research audit.
 - Output: one result per file, including duplicates and failures; CSV download.
 - Inspect the uploaded full-frame DICOM beside findings, with zoom, pan,
   brightness, contrast and fullscreen. Display adjustments never change inference.
-- No violation masks, coordinates or heatmaps; synthetic examples contain no DICOM.
-- Study-grouped browsing, session-only reviewed marks and a printable report; model CSV remains independent of review marks.
+- Toggle pixel-derived geometry and heuristic bright-inclusion overlays from dxa-qc; no expert segmentation or millimetre claims. Synthetic examples contain no DICOM.
+- Anatomy-grouped browsing (spine, hips, unknown), session-only reviewed marks and a printable report; model CSV remains independent of review marks.
 - Isolated retry of one failed file, including a ZIP member selected by ordinal.
 - No accounts or persistent study archive in this version.
 - Files are processed temporarily; no browser-to-GPU credentials.
@@ -60,7 +62,8 @@ precise language. Owner delegated visual direction and implementation choices.
 
 Frozen model metadata in `models/radiance/`; full local artifacts in `artifacts/`;
 research reports and checked aggregate metrics in `research/`. Real DICOM data
-stays outside Git. Any interface example must be clearly labeled synthetic.
+stays outside Git. Synthetic interface examples must be clearly labeled;
+real examples must be identified as such.
 
 ## Product Principles
 
