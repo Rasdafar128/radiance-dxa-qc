@@ -76,7 +76,7 @@ C, балансировки и порогов. Финальные головы �
 Проверка из корня: `python3 -m src.utils.prepare_model --verify-only`.
 Из локального исследовательского комплекта:
 `python3 -m src.utils.prepare_model --from-directory artifacts/ml-final`.
-Веса размещены в [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).
+Веса размещены в [GitHub Release v1.0.0](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0).
 В приватном репозитории нужен GitHub-доступ: [команды скачивания](../../docs/DEPLOYMENT.md#веса).
 При общедоступных assets подготовщик скачивает их сам по URL из `weights.json`. Токен HF не нужен для инференса и не входит
 в контейнер. Контрольные суммы несовпавших файлов останавливают подготовку.

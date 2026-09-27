@@ -6,7 +6,7 @@
 на публичном сайте оставался предыдущий интерфейс без слоя разметки.
 Описанные ниже изменения интерфейса пока не опубликованы на сервере.
 
-**Актуальные код, сайт и презентацию берите из [ветки `main`](https://github.com/sefixnep/LCT26/tree/main).**
+**Актуальные код, сайт и презентацию берите из [ветки `main`](https://github.com/Rasdafar128/radiance-dxa-qc/tree/main).**
 Тег `v1.0.0` сохраняет выпуск модели от 22 сентября и служит источником неизменных
 весов. Его **Source code (zip/tar.gz)** содержит старый снимок кода, без последних
 изменений интерфейса и презентации.
@@ -15,7 +15,7 @@
 качество, типы нарушения → CSV. Модель команды **Radiance 1.0**: DINOv3 Large + MedImageInsight + геометрия оси и поля бедра.
 Инференс работает без сети, обучения и обращения к облачным моделям.
 
-> **Для запуска модели нужны веса из [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).**
+> **Для запуска модели нужны веса из [GitHub Release v1.0.0](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0).**
 > Клонирование репозитория или скачивание **Source code (zip)** не включает два файла энкодеров.
 > Скачайте их из раздела **Assets** и разместите по [инструкции](docs/DEPLOYMENT.md#веса)
 > **до сборки Docker**. Головы и конфигурации модели уже находятся в репозитории.
@@ -36,7 +36,7 @@
 | Сайт + модель на одном сервере | `docker/compose.yaml`, CUDA — `docker/compose.cuda.yaml` |
 | VDS + отдельный GPU-сервер | [Подключение сайта](docs/WEBSITE.md) |
 | Модель Radiance 1.0 | [Карточка модели](models/radiance/README.md) |
-| Неизменные веса и метаданные выпуска модели | [GitHub Release v1.0.0 → Assets](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0) |
+| Неизменные веса и метаданные выпуска модели | [GitHub Release v1.0.0 → Assets](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0) |
 | Установка и эксплуатация | [Развёртывание](docs/DEPLOYMENT.md) |
 | Исследования и воспроизведение | [research/](research/README.md) |
 
@@ -77,10 +77,10 @@ docker compose -f docker/compose.yaml up -d --build --wait --wait-timeout 300
 # docker compose -f docker/compose.yaml -f docker/compose.cuda.yaml up -d --build --wait --wait-timeout 300
 ```
 
-Веса прикреплены к [GitHub Release v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0),
-контрольные суммы — в `models/radiance/weights.json`. Репозиторий приватный: для скачивания
-нужен доступ к GitHub, **HF-токен не требуется**. При открытом доступе к assets
-`python3 -m src.utils.prepare_model` скачивает и проверяет их автоматически.
+Веса прикреплены к [GitHub Release v1.0.0](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0),
+контрольные суммы — в `models/radiance/weights.json`. **HF-токен не требуется**:
+`python3 -m src.utils.prepare_model` скачивает ассеты релиза и сверяет их SHA-256
+автоматически, пока релиз доступен по ссылке.
 Локальный исследовательский комплект восстанавливается через
 `--from-directory artifacts/ml-final`.
 

@@ -19,7 +19,7 @@ Radiance проверяет качество DXA-снимков поясничн
 | Требования | `context/` | решения команды и документы организаторов |
 
 Данные и рабочие артефакты остаются вне Git. Веса доступны в
-[GitHub Release](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0);
+[GitHub Release](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0);
 контейнер инференса включает их и работает без сети.
 
 ## Поток обработки

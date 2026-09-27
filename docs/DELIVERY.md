@@ -152,9 +152,9 @@ HF_HUB_OFFLINE=1 python -m src.utils.check --device cuda
 
 ## GitHub Release и лицензии
 
-Сохранённый выпуск модели размещён в [релизе v1.0.0](https://github.com/sefixnep/LCT26/releases/tag/v1.0.0).
+Сохранённый выпуск модели размещён в [релизе v1.0.0](https://github.com/Rasdafar128/radiance-dxa-qc/releases/tag/v1.0.0).
 Актуальные код, сайт, презентация и документы находятся в
-[ветке `main`](https://github.com/sefixnep/LCT26/tree/main). Архивы Source code этого
+[ветке `main`](https://github.com/Rasdafar128/radiance-dxa-qc/tree/main). Архивы Source code этого
 релиза содержат снимок от 22 сентября без последних изменений интерфейса и
 презентации. К релизу приложены два
 энкодера, метаданные Radiance, лицензии и контрольные суммы; веса не добавлены в git.
